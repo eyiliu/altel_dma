@@ -3,7 +3,7 @@
 
 #include <asm-generic/int-ll64.h>
 #include <linux/compiler.h>
-#include <linux/compiler-gcc.h>
+// #include <linux/compiler-gcc.h>
 #include <linux/io-64-nonatomic-lo-hi.h>
 #include <linux/kernel.h>
 #include <linux/spinlock_types.h>
