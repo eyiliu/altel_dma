@@ -109,11 +109,8 @@ static struct xilinx_dma_chan *rx_chan;
 static struct xilinx_dma_chan *tx_chan;
 
 static struct task_struct *rx_thread;
-//static struct task_struct *tx_thread;
 int rx_thread_wq_condition;
-int tx_thread_wq_condition;
 DECLARE_WAIT_QUEUE_HEAD(rx_thread_wq);
-DECLARE_WAIT_QUEUE_HEAD(tx_thread_wq);
 static DEFINE_SPINLOCK(dma_register_rd_lock);
 static DEFINE_SPINLOCK(dma_register_wr_lock);
 
@@ -1597,15 +1594,15 @@ static int allocate_buffers(struct device *dev) {
     dma_rx_bufs[i].bytes_processed = 0;
     dma_rx_bufs[i].bytes_received = 0;
     dma_rx_bufs[i].hwaddr = 0;
-    dma_rx_bufs[i].buf = NULL;
     dma_rx_bufs[i].buf = dma_alloc_coherent(dev, bufsize_rd, &dma_rx_bufs[i].hwaddr, GFP_DMA | GFP_KERNEL);
+
     if (!dma_rx_bufs[i].buf) {
       dev_err(dev, "allocating rx buffer %02d failed\n", i);
       return -ENOMEM;
     }
     dma_rx_bufs[i].bs = BS_ALLOCATED;
-//		dev_info(dev, "buffer[%02d]: logic=%p, hw=%p\n", i, dma_rx_bufs[i].buf, dma_rx_bufs[i].hwaddr);
   }
+
   for (i = 0; i < bufcount_rd; i++) {
     dma_rx_bufs[i].bs = BS_READY_FOR_DMA;
   }
@@ -1631,8 +1628,36 @@ static int allocate_buffers(struct device *dev) {
   return 0;
 }
 
+static int free_buffers(struct device *dev) {
+  /* RX BUFFERS*/
+  if(dma_rx_bufs){
+    dev_info(dev, "Free %d RX buffers of %d bytes each\n", bufcount_rd, bufsize_rd);
+    for (int i = 0; i < bufcount_rd; i++) {
+      if(dma_rx_bufs[i].buf){
+        dma_free_coherent(dev, bufsize_rd,  dma_rx_bufs[i].buf,  dma_rx_bufs[i].hwaddr);
+      }
+    }
+    dev_info(dev, "debug: free RX buffer pointer array. Size=%llu\n", (unsigned long long) bufcount_rd * sizeof(struct dma_rx_buf_t));
+    kfree(dma_rx_bufs);
+    dma_rx_bufs = 0;
+  }
+
+  /* TX BUFFERS*/
+  dev_info(dev, "Free %d TX buffers of %d bytes each\n", bufcount_wr, bufsize_wr);
+  if(dma_tx_bufs){
+    for (int i = 0; i < bufcount_wr; i++) {
+      if(dma_tx_bufs[i].buf){
+        dma_free_coherent(dev, bufsize_wr, dma_tx_bufs[i].buf, dma_tx_bufs[i].hwaddr);
+      }
+    }
+    dev_info(dev, "debug: free TX buffer pointer array. Size=%llu\n", (unsigned long long) bufcount_wr * sizeof(struct dma_tx_buf_t));
+    kfree(dma_tx_bufs);
+    dma_tx_bufs = 0;
+  }
+  return 0;
+}
+
 static int rx_task(void *data) {
-  //init_waitqueue_head(rx_thread_wq);
   unsigned long flags;
   int ret = 0;
   dev_info(dev, "starting RX thread\n");
@@ -1664,12 +1689,10 @@ static int rx_task(void *data) {
 
 /* character device functions */
 static int charrd_open(struct inode * inode, struct file *file) {
-//	dev_info(dev, "opening charrd_open\n");
   if (down_interruptible(&sem_rd) != 0) {
     dev_err(dev, "device %s is already opened by another process\n", file->f_path.dentry->d_iname);
     return -EBUSY;
   }
-//	dev_info(dev, "charrd_open succeeded\n");
   return 0;
 }
 static int charrd_close(struct inode *inode, struct file *file) {
@@ -2038,6 +2061,8 @@ static int xilinx_dma_remove(struct platform_device *pdev) {
 
   xdma_disable_allclks(xdev);
   kfree(rx_thread);
+
+  free_buffers(xdev->dev);
   return 0;
 }
 
