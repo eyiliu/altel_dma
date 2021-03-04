@@ -1,18 +1,24 @@
-obj-m := axidmachar.o
+ifneq ($(KERNELRELEASE),)
 ccflags-y := -std=gnu99 -Wno-declaration-after-statement
+ccflags-y += -I$(src)/include
 
-SRC := $(shell pwd)
+obj-m := alpidedma.o
+alpidedma-y := axidmachar.o
+# CFLAGS_axidmachar.o := -I$(src)/include
 
-#KERNEL_SRC := /usr/src/kernels/4.19.0-xilinx-v2019.2
-KERNEL_SRC := /usr/src/kernels/$(shell uname -r)
+else
 
-all:
-	make -C  $(KERNEL_SRC) M=$(SRC)
+KERNEL_SRC ?= /usr/src/kernels/$(shell uname -r)
+
+all: modules
+
+modules:
+	make -C  $(KERNEL_SRC) M=$$PWD modules
 
 modules_install:
-	make -C  $(KERNEL_SRC) M=$(SRC) modules_install
+	make -C  $(KERNEL_SRC) M=$$PWD modules_install
 
 clean:
-	rm -f *.o *~ core .depend .*.cmd *.ko *.mod.c *.o.d .*o.d
-	rm -f Module.markers Module.symvers modules.order
-	rm -rf .tmp_versions Modules.symvers
+	make -C  $(KERNEL_SRC) M=$$PWD clean
+
+endif

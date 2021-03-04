@@ -58,6 +58,8 @@
 #include <linux/miscdevice.h> /*my_cdev_struct*/
 #include <linux/spinlock.h> /*spinlocks spin_lock_irqsave*/
 
+/* #include <linux/dmaengine.h> */
+
 #include "xilinx_dma.h"
 #include "dmaengine.h"
 #include "axidmachar.h"
