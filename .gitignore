@@ -11,3 +11,4 @@
 *.order
 *.symvers
 .tmp_versions
+*/a.out

@@ -2,8 +2,8 @@ ifneq ($(KERNELRELEASE),)
 ccflags-y := -std=gnu99 -Wno-declaration-after-statement
 ccflags-y += -I$(src)/include
 
-obj-m := alpidedma.o
-alpidedma-y := axidmachar.o
+obj-m := alteldma.o
+alteldma-y := axidmachar.o
 # CFLAGS_axidmachar.o := -I$(src)/include
 
 else
