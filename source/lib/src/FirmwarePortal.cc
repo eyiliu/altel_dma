@@ -8,7 +8,7 @@
 #include "FirmwarePortal.hh"
 
 static const std::string altel_reg_cmd_list_content =
-#include "altel_reg_cmd_list.hh"
+#include "altel_reg_cmd_list_json.hh"
   ;
 
 FirmwarePortal::FirmwarePortal(const std::string &json_str, const std::string &ipaddr){

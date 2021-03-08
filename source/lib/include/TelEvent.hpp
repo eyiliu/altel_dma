@@ -140,12 +140,20 @@ namespace altel{
   struct TelFitHit{
     uint16_t DN{0};   // detector id
     double PLs[2]{0.0, 0.0}; // local pos
-    double DLs[3]{0.0, 0.0, 0.0}; // local dir
+    double DLs[3]{0.0, 0.0, 0.0}; // local dir // todo remove
 
     double PGs[3]{0.0, 0.0, 0.0}; // global pos
     double DGs[3]{0.0, 0.0, 0.0}; // global dir
 
     std::shared_ptr<TelMeasHit> OM; // origin measure hit
+
+    TelFitHit(uint16_t detN,
+              double u, double v,
+              double x, double y, double z,
+              double dx, double dy, double dz,
+              std::shared_ptr<TelMeasHit> originMeasHit=nullptr)
+      :DN(detN), PLs{u, v}, PGs{x, y, z}, DGs{dx, dy, dz}, OM(originMeasHit){};
+
 
     inline uint16_t& detN() {return DN;}
     inline double& u() {return PLs[0];}
@@ -174,6 +182,11 @@ namespace altel{
     uint16_t DN{0}; // detector id
     std::shared_ptr<TelFitHit>  FH;  // fitted hit
     std::shared_ptr<TelMeasHit> MM; // measure hit, matched
+
+    TelTrajHit(uint16_t detN,
+               std::shared_ptr<TelFitHit> fitHit=nullptr,
+               std::shared_ptr<TelMeasHit> matchedMeasHit=nullptr)
+      :DN(detN), FH(fitHit), MM(matchedMeasHit){};
 
     inline uint16_t& detN() {return DN;}
     inline std::shared_ptr<TelFitHit>& fitHit() {return FH;}
@@ -215,8 +228,8 @@ namespace altel{
     uint64_t TN{0};                               // trajectories id
     std::vector<std::shared_ptr<TelTrajHit>> THs; // hit
 
-    const std::vector<std::shared_ptr<TelTrajHit>>& trajectoryHits() const{return THs;}
-    std::vector<std::shared_ptr<TelTrajHit>>& trajectoryHits() {return THs;}
+    const std::vector<std::shared_ptr<TelTrajHit>>& trajHits() const{return THs;}
+    std::vector<std::shared_ptr<TelTrajHit>>& trajHits() {return THs;}
 
     std::shared_ptr<TelTrajHit> trajHit(size_t id){
       for(const auto& th: THs){
@@ -283,7 +296,7 @@ namespace altel{
     const uint64_t& clkN() const  {return CK;}
     const std::vector<TelMeasRaw>& measRaws() const{return MRs;}
     const std::vector<std::shared_ptr<TelMeasHit>>& measHits() const{return MHs;}
-    const std::vector<std::shared_ptr<TelTrajectory>>& trajectories() const{return TJs;}
+    const std::vector<std::shared_ptr<TelTrajectory>>& trajs() const{return TJs;}
 
     uint32_t& runN() {return RN;}
     uint32_t& eveN() {return EN;}
@@ -291,6 +304,26 @@ namespace altel{
     uint64_t& clkN() {return CK;}
     std::vector<TelMeasRaw>& measRaws() {return MRs;}
     std::vector<std::shared_ptr<TelMeasHit>>& measHits() {return MHs;}
-    std::vector<std::shared_ptr<TelTrajectory>>& trajectories(){ return TJs;}
+    std::vector<std::shared_ptr<TelTrajectory>>& trajs(){ return TJs;}
+
+    std::vector<std::shared_ptr<TelMeasHit>> measHits(const std::vector<uint16_t>& detNs){
+      std::vector<std::shared_ptr<TelMeasHit>> measHits_subset;
+      for(auto &aMeasHit: MHs){
+        if(std::find(detNs.begin(), detNs.end(), aMeasHit->detN()) != detNs.end()){
+          measHits_subset.push_back(aMeasHit);
+        }
+      }
+      return measHits_subset;
+    }
+
+    std::vector<std::shared_ptr<TelMeasHit>> measHits(const uint16_t detN){
+      std::vector<std::shared_ptr<TelMeasHit>> measHits_subset;
+      for(auto &aMeasHit: MHs){
+        if(aMeasHit->detN() == detN){
+          measHits_subset.push_back(aMeasHit);
+        }
+      }
+      return measHits_subset;
+    }
   };
 }

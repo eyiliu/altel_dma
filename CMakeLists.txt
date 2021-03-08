@@ -68,7 +68,7 @@ find_package(Threads REQUIRED)
 
 ## external
 # add_subdirectory(external)
-# add_subdirectory(source)
+add_subdirectory(source)
 add_subdirectory(module)
 add_subdirectory(dma_checker)
 
