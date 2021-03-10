@@ -6,6 +6,7 @@
 #include <fstream>
 #include <chrono>
 #include <filesystem>
+#include <future>
 
 #include <signal.h>
 #include <fcntl.h>
@@ -30,6 +31,47 @@ using std::size_t;
 #endif
 #define debug_print(fmt, ...)                                           \
   do { if (DEBUG_PRINT) std::fprintf(stdout, fmt, ##__VA_ARGS__); } while (0)
+
+
+static sig_atomic_t g_done = 0;
+
+std::atomic<size_t> ga_unexpectedN = 0;
+std::atomic<size_t> ga_dataFrameN = 0;
+std::atomic<uint16_t>  ga_lastTriggerId = 0;
+
+uint64_t AsyncWatchDog(){
+  auto tp_run_begin = std::chrono::system_clock::now();
+  auto tp_old = tp_run_begin;
+  size_t st_old_dataFrameN = 0;
+  size_t st_old_unexpectedN = 0;
+  
+  while(!g_done){
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    auto tp_now = std::chrono::system_clock::now();
+    std::chrono::duration<double> dur_period_sec = tp_now - tp_old;
+    std::chrono::duration<double> dur_accu_sec = tp_now - tp_run_begin;
+    double sec_period = dur_period_sec.count();
+    double sec_accu = dur_accu_sec.count();
+
+    size_t st_unexpectedN = ga_unexpectedN;
+    size_t st_dataFrameN = ga_dataFrameN;
+    uint16_t st_lastTriggerId= ga_lastTriggerId;
+
+    
+    double st_hz_pack_accu = st_dataFrameN / sec_accu;
+    double st_hz_pack_period = (st_dataFrameN-st_old_dataFrameN) / sec_period;
+
+    tp_old = tp_now;
+    st_old_dataFrameN= st_dataFrameN;
+    st_old_unexpectedN = st_unexpectedN;
+
+    std::fprintf(stdout, "ev_accu(%.2f hz) ev_trans(%.2f hz) last_id(%.2hu) ", st_hz_pack_accu, st_hz_pack_period, st_lastTriggerId);
+  }
+
+  return 0;
+}
+
+
 
 namespace{
 
@@ -112,7 +154,7 @@ namespace{
   }
 
   std::string readPack(int fd_rx, const std::chrono::milliseconds &timeout_idel){ //timeout_read_interval
-    std::fprintf(stderr, "-");
+    // std::fprintf(stderr, "-");
     size_t size_buf_min = 12;
     size_t size_buf = size_buf_min;
     std::string buf(size_buf, 0);
@@ -350,7 +392,6 @@ examples:
 
 )";
 
-static sig_atomic_t g_done = 0;
 int main(int argc, char *argv[]) {
   signal(SIGINT, [](int){g_done+=1;});
 
@@ -442,13 +483,11 @@ int main(int argc, char *argv[]) {
   std::fprintf(stdout, "rawFile:   %s\n", rawFilePath.c_str());
   std::fprintf(stdout, "\n");
 
-
   // if (rawFilePath.empty() && !do_rawPrint) {
   //   std::fprintf(stderr, "ERROR: neither rawPrint or rawFile is set.\n\n");
   //   std::fprintf(stderr, "%s\n", help_usage.c_str());
   //   std::exit(1);
   // }
-
 
   std::FILE *fp = nullptr;
   if(!rawFilePath.empty()){
@@ -496,10 +535,18 @@ int main(int argc, char *argv[]) {
   }
   std::fprintf(stdout, " connected\n");
 
-
+  size_t unexpectedN = 0;
   size_t dataFrameN = 0;
+  
   std::chrono::system_clock::time_point tp_timeout_exit  = std::chrono::system_clock::now() + std::chrono::seconds(exitTimeSecond);
 
+  bool isFirstEvent = true;
+  uint16_t firstId = 0;
+  uint16_t lastId = 0;
+
+
+  std::future<uint64_t> fut_async_watch;
+  fut_async_watch = std::async(std::launch::async, &AsyncWatchDog);
   while(!g_done){
     if(exitTimeSecond && std::chrono::system_clock::now() > tp_timeout_exit){
       std::fprintf(stdout, "run %d seconds, nornal exit\n", exitTimeSecond);
@@ -525,21 +572,48 @@ int main(int argc, char *argv[]) {
 
     }
 
-    if(dataFrameN%100==0){
-      std::time_t tt = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-      std::cout<< ctime(&tt)<<" "<< dataFrameN<< std::endl;
+    uint16_t triggerId =  *reinterpret_cast<const uint16_t*>(df_pack.data() + 8);
+    if(isFirstEvent){
+      lastId = triggerId -1;
+      isFirstEvent = false;
     }
-
+    uint16_t expectedId = lastId +1;
+    
+    if(triggerId != expectedId ){
+      std::fprintf(stdout, "\nexpected #%hu, got #%hu,  lost #%hu\n",  expectedId, triggerId, triggerId-expectedId);
+      unexpectedN ++;
+    }
+    
+    // if(dataFrameN%1000==0){
+    //   // std::time_t tt = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    //   // std::cout<< ctime(&tt)<<" "<< dataFrameN<< std::endl;
+    //   std::fprintf(stdout, "#%zu\n", dataFrameN);
+    // }
+    
     if(fp){
       std::fwrite(df_pack.data(), 1, df_pack.size(), fp);
       std::fflush(fp);
     }
     dataFrameN ++;
+    lastId = triggerId;
+
+    ga_dataFrameN = dataFrameN;
+    ga_unexpectedN = unexpectedN;
+    ga_lastTriggerId = lastId;
   }
+
+  std::fprintf(stdout, "dataFrameN #%zu, unexpectedN #%zu\n",  dataFrameN, unexpectedN);
+  
   close(fd_rx);
   if(fp){
     std::fflush(fp);
     std::fclose(fp);
   }
+
+  g_done= 1;
+  if(fut_async_watch.valid())
+    fut_async_watch.get();
+  
   return 0;
 }
+
