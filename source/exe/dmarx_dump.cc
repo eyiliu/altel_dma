@@ -64,8 +64,7 @@ uint64_t AsyncWatchDog(){
     tp_old = tp_now;
     st_old_dataFrameN= st_dataFrameN;
     st_old_unexpectedN = st_unexpectedN;
-
-    std::fprintf(stdout, "ev_accu(%.2f hz) ev_trans(%.2f hz) last_id(%.2hu) ", st_hz_pack_accu, st_hz_pack_period, st_lastTriggerId);
+    std::fprintf(stdout, "\nev_accu(%.2f hz) ev_trans(%.2f hz) last_id(%.2hu) \n", st_hz_pack_accu, st_hz_pack_period, st_lastTriggerId);
   }
 
   return 0;

@@ -1392,6 +1392,7 @@ static int allocate_buffers(struct device *dev) {
   dev_info(dev, "successfully allocated %d RX buffers of %d bytes each\n", bufcount_rd, bufsize_rd);
 
   /* TX BUFFERS*/
+  /*
   dev_info(dev, "debug: allocating TX buffer pointer array. Size=%llu\n", (unsigned long long) bufcount_wr * sizeof(struct dma_tx_buf_t));
   dma_tx_bufs = kmalloc(bufcount_wr * sizeof(*dma_tx_bufs), GFP_KERNEL);
   if (!dma_tx_bufs) {
@@ -1408,6 +1409,7 @@ static int allocate_buffers(struct device *dev) {
     }
   }
   dev_info(dev, "successfully allocated %d TX buffers of %d bytes\n", bufcount_wr, bufsize_wr);
+  */
   return 0;
 }
 
@@ -1426,6 +1428,7 @@ static int free_buffers(struct device *dev) {
   }
 
   /* TX BUFFERS*/
+  /*
   dev_info(dev, "Free %d TX buffers of %d bytes each\n", bufcount_wr, bufsize_wr);
   if(dma_tx_bufs){
     for (int i = 0; i < bufcount_wr; i++) {
@@ -1437,6 +1440,7 @@ static int free_buffers(struct device *dev) {
     kfree(dma_tx_bufs);
     dma_tx_bufs = 0;
   }
+  */
   return 0;
 }
 
@@ -1444,9 +1448,9 @@ static int rx_task(void *data) {
   unsigned long flags;
   int ret = 0;
   dev_info(dev, "starting RX thread\n");
-  dev_info(dev, "resetting tx_chan\n");
-  xilinx_dma_reset(tx_chan);
-  dma_ctrl_clr(tx_chan, XILINX_DMA_REG_DMACR, XILINX_DMA_DMAXR_ALL_IRQ_MASK);
+  //dev_info(dev, "resetting tx_chan\n");
+  //xilinx_dma_reset(tx_chan);
+  //dma_ctrl_clr(tx_chan, XILINX_DMA_REG_DMACR, XILINX_DMA_DMAXR_ALL_IRQ_MASK);
   /* start the first transaction*/
   dev_info(dev, "resuming rx_chan\n");
   ret = rx_resume(rx_chan, true);
@@ -1639,7 +1643,7 @@ static int create_devices(struct xilinx_dma_device *xdev) {
   int ret = 0;
 
   sema_init(&sem_rd, 1); //initial value of one - only 1 process can read from
-  sema_init(&sem_wr, 1); //initial value of one
+  /* sema_init(&sem_wr, 1); //initial value of one */
 
   xdev->mdevrd.minor = MISC_DYNAMIC_MINOR;
   xdev->mdevrd.name = "axidmard";
@@ -1654,6 +1658,7 @@ static int create_devices(struct xilinx_dma_device *xdev) {
   }
   dev_info(xdev->dev, "/dev/axidmard Registered\n");
 
+  /*
   xdev->mdevwr.minor = MISC_DYNAMIC_MINOR;
   xdev->mdevwr.name = "axidmawr";
   xdev->mdevwr.fops = &fops_wr;
@@ -1666,6 +1671,7 @@ static int create_devices(struct xilinx_dma_device *xdev) {
     return ret;
   }
   dev_info(xdev->dev, "/dev/axidmawr Registered\n");
+  */
   return ret;
 }
 
@@ -1838,8 +1844,8 @@ static int xilinx_dma_remove(struct platform_device *pdev) {
   misc_deregister(&xdev->mdevrd);
   dev_info(xdev->dev, "/dev/axidmard Deregistered\n");
 
-  misc_deregister(&xdev->mdevwr);
-  dev_info(xdev->dev, "/dev/axidmawr Deregistered\n");
+  /* misc_deregister(&xdev->mdevwr); */
+  /* dev_info(xdev->dev, "/dev/axidmawr Deregistered\n"); */
 
   free_buffers(xdev->dev);
 
