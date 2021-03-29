@@ -835,18 +835,11 @@
     
     "FIRMWARE_CMD_LIST_V3":[
 	{
-	    "name":"RESET",
-	    "value":"0xff",
-	    "bytes":1,
-	    "words":1,
-	    "description":"Reset the DAQ System including all the registers. The SiTCP would need 3-4 seconds to reconnect"
-	},
-	{
 	    "name":"BROADCAST",
 	    "value":"0x50",
 	    "bytes":1,
 	    "words":1,
-	    "description":"Reset the DAQ System including all the registers. The SiTCP would need 3-4 seconds to reconnect"
+	    "description":"Broadcast ALPIDE opcode"
 	},
 	{
 	    "name":"WRITE",
@@ -874,26 +867,6 @@
 	    "write":true,
 	    "reset":"0x00",
 	    "description":"Command Register"
-	},
-	{
-	    "name":"FIRMWARE_RESET",
-	    "address":"0x43c00000",
-	    "bytes":1,
-	    "words":1,
-	    "read":false,
-	    "write":true,
-	    "reset":"0x00",
-	    "description":"0xFF reset"
-	},
-	{
-	    "name":"ADDR_CHIP_ID",
-	    "address":"0x43c00004",
-	    "bytes":1,
-	    "words":1,
-	    "read":true,
-	    "write":true,
-	    "reset":"0x00",
-	    "description":"ALPIDE ChipID under Test"
 	},
 	{
 	    "name":"ADDR_CHIP_REG",
@@ -972,16 +945,6 @@
 	    "description":"Data Wrote to ALPIDE Register [15:8] "
 	},
 	{
-	    "name":"FIRMWARE_STOP",
-	    "address":"0x43c00014",
-	    "bytes":1,
-	    "words":1,
-	    "read":true,
-	    "write":true,
-	    "reset":"0x00",
-	    "description":"0xff to stop, 0x00 run"
-	},
-	{
 	    "name":"BROADCAST_OPCODE",
 	    "address":"0x43c00018",
 	    "bytes":1,
@@ -1023,61 +986,6 @@
 	    "write":true,
 	    "reset":"0x00",
 	    "description":"Trigger Delay in Step of 25 ns[15:8]"
-	},
-	{
-	    "name":"GAP_INT_TRIG",
-	    "address":[
-		    "GAP_INT_TRIG_L0",
-		    "GAP_INT_TRIG_L1",
-		    "GAP_INT_TRIG_L2",
-		    "GAP_INT_TRIG_L3"
-	    ],
-	    "bytes":4,
-	    "words":4,
-	    "endian":"LE",
-	    "read":true,
-	    "write":true,
-	    "description":"Controls the frequency of the internal trigger in step of 5μs. The cycle time has a minimum value of 1. A 0 would be reset to 1 if wrote to this register. 0x43c0002c"
-	},
-	{
-	    "name":"GAP_INT_TRIG_L0",
-	    "address":"0x43c0002c",
-	    "bytes":1,
-	    "words":1,
-	    "read":true,
-	    "write":true,
-	    "reset":"0x14",
-	    "description":"period Internal Trigger in 25ns setep"
-	},
-	{
-	    "name":"GAP_INT_TRIG_L1",
-	    "address":"0x43c0002d",
-	    "bytes":1,
-	    "words":1,
-	    "read":true,
-	    "write":true,
-	    "reset":"0x00",
-	    "description":"period Internal Trigger in 25ns setep"
-	},
-	{
-	    "name":"GAP_INT_TRIG_L2",
-	    "address":"0x43c0002e",
-	    "bytes":1,
-	    "words":1,
-	    "read":true,
-	    "write":true,
-	    "reset":"0x00",
-	    "description":"period Internal Trigger in 25ns setep"
-	},
-	{
-	    "name":"GAP_INT_TRIG_L3",
-	    "address":"0x43c0002f",
-	    "bytes":1,
-	    "words":1,
-	    "read":true,
-	    "write":true,
-	    "reset":"0x00",
-	    "description":"period Internal Trigger in 25ns setep"
 	},
 	{
 	    "name":"COUNT_READ",
@@ -1123,15 +1031,15 @@
 	    "description":"Data Read from ALPIDE Register[15:8] "
 	},
 	{
-	    "name":"FIRMWARE_MODE",
-	    "address":"0x43c00040",
-	    "bytes":1,
-	    "words":1,
-	    "read":true,
-	    "write":true,
-	    "reset":"0x00",
-	    "description":"FPGA Working Mode. Bit[7:2] Not used. Bit[1] =1, Internal trigger mode; =0, External trigger mode. Bit[0] =1, ALPIDE samples frame data continuously; =0, ALPIDE IDLE. "
-	}
+           "name":"FIRMWARE_MODE",
+           "address":"0x43c00040",
+           "bytes":1,
+           "words":1,
+           "read":true,
+           "write":true,
+           "reset":"0x00",
+            "description":"FPGA Working Mode. Bit[7:1] Not used. External trigger mode. Bit[0] =1, ALPIDE samples frame data continuously; =0, ALPIDE IDLE. "
+        }
+
     ]
-    
 }

@@ -145,13 +145,14 @@ int main(int argc, char **argv){
     }
     else if ( std::regex_match(result, std::regex("\\s*(reset)\\s*")) ){
       printf("reset \n");
-      m_fw->SendFirmwareCommand("RESET");
-      m_fw->SetFirmwareRegister("FIRMWARE_RESET", 0xff);
+      // m_fw->SendFirmwareCommand("RESET");
+      // m_fw->SetFirmwareRegister("FIRMWARE_RESET", 0xff);
     }
     else if ( std::regex_match(result, std::regex("\\s*(init)\\s*")) ){
       printf("init \n");
       // begin init
       //  m_fw->SendFirmwareCommand("RESET");
+      m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0); // stop trigger, go into configure mode 
       m_fw->SetFirmwareRegister("TRIG_DELAY", 1); //25ns per dig (FrameDuration?)
       // m_fw->SetFirmwareRegister("GAP_INT_TRIG", 20);
 
@@ -235,15 +236,13 @@ int main(int argc, char **argv){
       m_fw->SetAlpideRegister("CMU_DMU_CONF", 0x70);// token
       m_fw->SetAlpideRegister("CHIP_MODE", 0x3d); //trigger MODE
       m_fw->SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset, commit token
-      // m_fw->SetFirmwareRegister("FIRMWARE_STOP", 0x00);//remove stop flag
-      m_fw->SetFirmwareRegister("FIRMWARE_MODE", 1); //run inter trigger
+      m_fw->SetFirmwareRegister("FIRMWARE_MODE", 1); //run, fw forward trigger
       std::fprintf(stdout, " fw start %s\n", m_fw->DeviceUrl().c_str());
     }
     else if ( std::regex_match(result, std::regex("\\s*(stop)\\s*")) ){
       printf("stopping\n");
-      m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0); //fw must be stopped before chip
-      // m_fw->SetFirmwareRegister("FIRMWARE_STOP", 0xff); // set stop flag
-      m_fw->SetAlpideRegister("CHIP_MODE", 0x3c); // configure mode
+      m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0); // stop trigger, fw goes into configure mode 
+      m_fw->SetAlpideRegister("CHIP_MODE", 0x3c); // sensor goes to configure mode
       std::fprintf(stdout, " fw stop  %s\n", m_fw->DeviceUrl().c_str());
     }
     else if ( std::regex_match(result, std::regex("\\s*(info)\\s+(regcmd)\\s*"))){
