@@ -70,7 +70,7 @@ find_package(Threads REQUIRED)
 # add_subdirectory(external)
 add_subdirectory(source)
 add_subdirectory(module)
-add_subdirectory(dma_checker)
+# add_subdirectory(dma_checker)
 
 # install-tree
 set(CONF_LIBRARIES "")

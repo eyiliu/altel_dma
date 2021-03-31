@@ -11,56 +11,14 @@ static const std::string altel_reg_cmd_list_content =
 #include "altel_reg_cmd_list_json.hh"
   ;
 
-FirmwarePortal::FirmwarePortal(const std::string &json_str, const std::string &ipaddr){
-  m_alpide_ip_addr = ipaddr;
+FirmwarePortal::FirmwarePortal(const std::string &json_str){
+  m_alpide_ip_addr = "";
   if(json_str == "builtin"){
     m_json.Parse(altel_reg_cmd_list_content.c_str());
   }
   else{
     m_json.Parse(json_str.c_str());
   }
-  if(m_json.HasParseError()){
-    fprintf(stderr, "JSON parse error: %s (at string positon %lu)", rapidjson::GetParseError_En(m_json.GetParseError()), m_json.GetErrorOffset());
-    throw;
-  }
-}
-
-FirmwarePortal::FirmwarePortal(const std::string &json_str){
-  rapidjson::GenericDocument<rapidjson::UTF8<char>, rapidjson::CrtAllocator>  js_doc;
-  js_doc.Parse(json_str);
-  if(js_doc.HasParseError()){
-    fprintf(stderr, "JSON parse error: %s (at string positon %lu)", rapidjson::GetParseError_En(js_doc.GetParseError()), js_doc.GetErrorOffset());
-    throw;
-  }
-  m_js_conf.CopyFrom<rapidjson::CrtAllocator>(js_doc, m_jsa);
-
-  auto& js_proto = m_js_conf["protocol"];
-  auto& js_opt = m_js_conf["options"];
-  std::string reg_file_path;
-  if(js_proto == "udp"){
-    m_alpide_ip_addr = js_opt["ip"].GetString();
-    reg_file_path = js_opt["path"].GetString();
-  }
-
-  if(reg_file_path.empty()){
-      fprintf(stderr, "empty reg_file_path");
-      throw;
-  }
-
-  std::string reg_str;
-  if(reg_file_path == "builtin"){
-    reg_str = altel_reg_cmd_list_content;
-    // std::cout<<"=====================builting "<< altel_reg_cmd_list_content<<std::endl;
-  }
-  else{
-    reg_str = LoadFileToString(reg_file_path);
-  }
-  if(reg_str.empty()){
-    fprintf(stderr, "empty reg_str");
-    throw;
-  }
-
-  m_json.Parse(reg_str.c_str());
   if(m_json.HasParseError()){
     fprintf(stderr, "JSON parse error: %s (at string positon %lu)", rapidjson::GetParseError_En(m_json.GetParseError()), m_json.GetErrorOffset());
     throw;

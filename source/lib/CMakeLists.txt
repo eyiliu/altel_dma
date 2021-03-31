@@ -11,7 +11,7 @@ target_include_directories(headerFileRegCmd INTERFACE
 
 aux_source_directory(src LIB_SRC)
 add_library(altel-rbcp STATIC ${LIB_SRC} )
-target_link_libraries(altel-rbcp PUBLIC mycommon headerFileRegCmd)
+target_link_libraries(altel-rbcp PUBLIC mycommon headerFileRegCmd Threads::Threads)
 
 target_include_directories(altel-rbcp
   PUBLIC

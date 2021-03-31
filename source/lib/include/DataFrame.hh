@@ -38,11 +38,10 @@ namespace altel{
     template <typename Allocator>
     void fromJSON(const rapidjson::GenericValue<rapidjson::UTF8<>, Allocator> &js);
   
-    void fromRaw(const std::string &raw, uint32_t level = 4);
+    void fromRaw(const std::string &raw);
   
     static const uint16_t s_version{4};
     std::string m_raw;
-    uint16_t m_level_decode{0};
     uint64_t m_counter{0};
     uint64_t m_extension{0};
     uint64_t m_trigger{0};
@@ -125,7 +124,6 @@ namespace altel{
       clusterhit.buildClusterCenter();
       m_clusters.push_back(std::move(clusterhit));
     }
-    m_level_decode = 5;
   }
 
   class DataPack{

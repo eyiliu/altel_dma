@@ -20,7 +20,6 @@
 
 class FirmwarePortal{
 public:
-  FirmwarePortal(const std::string &json_str, const std::string &ipaddr);
   FirmwarePortal(const std::string &json_str_options);
 
   void SetFirmwareRegister(const std::string& name, uint64_t value);

@@ -49,7 +49,7 @@ namespace altel{
     std::mutex m_mtx_st;
   public:
     ~Layer();
-
+    Layer();
     void fw_start();
     uint64_t fw_async_restart();
     void fw_stop();
@@ -70,7 +70,7 @@ namespace altel{
     uint64_t AsyncWatchDog();
 
     std::string m_name;
-    rapidjson::CrtAllocator m_jsa;
-    rapidjson::GenericValue<rapidjson::UTF8<char>, rapidjson::CrtAllocator> m_js_conf;
+    
+    JsonDocument m_jsdoc_conf;
   };
 }
