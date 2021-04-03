@@ -235,7 +235,7 @@ int main(int argc, char **argv){
       }
     }
     else{
-      std::fprintf(stderr, "unknown command! consult possible commands by help....\n");
+      std::fprintf(stderr, "unknown command<%s>! consult possible commands by help....\n", result);
       linenoisePreloadBuffer("help");
     }
 
@@ -246,6 +246,7 @@ int main(int argc, char **argv){
   linenoiseHistorySave(linenoise_history_path);
   linenoiseHistoryFree();
 
+  printf("resetting from main thread.");
   dummyDump.reset();
   tcpClient.reset();
   tcpServer.reset();

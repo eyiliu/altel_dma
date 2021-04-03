@@ -27,13 +27,16 @@ struct TcpServerConn{
     fut = std::async(std::launch::async, &TcpServerConn::AsyncTcpConn, &isRunning, layer, sockfd_conn);
   }
   ~TcpServerConn(){
+    printf("TcpServerConn deconstructing\n");
     if(fut.valid()){
       isRunning = false;
       fut.get();
     }
+    printf("TcpServerConn deconstruction done\n");
   }
 
   static uint64_t AsyncTcpConn(bool* isTcpConn, altel::Layer* layer, int sockfd){
+    printf("AsyncTcpServerConn is started\n");
     uint64_t n_ev = 0;
     *isTcpConn = true;
     while (*isTcpConn){
@@ -41,7 +44,7 @@ struct TcpServerConn{
       if(ev_front){
         auto ev = ev_front;
         layer->PopFront();
-        std::string ev_raw = ev_front->m_raw;
+        std::string ev_raw = ev->m_raw;
         char *writeptr = ev_raw.empty()?nullptr:&ev_raw[0];
         size_t bytes_read = ev_raw.size();
         while (bytes_read > 0 && *isTcpConn) {
@@ -68,7 +71,7 @@ struct TcpServerConn{
     close(sockfd);
     *isTcpConn = false;
 
-    printf("AsyncTcpConn exited\n");
+    printf("AsyncTcpServerConn is exited\n");
     return n_ev;
   }
 };
@@ -87,10 +90,12 @@ struct TcpServer{
     fut = std::async(std::launch::async, &TcpServer::AsyncTcpServer, &isRunning, layer, port);
   }
   ~TcpServer(){
+    printf("TcpServer deconstructing\n");
     if(fut.valid()){
       isRunning = false;
       fut.get();
     }
+    printf("TcpServer deconstruction done\n");
   }
 
   static uint64_t AsyncTcpServer(bool* isTcpServ, altel::Layer* layer, short int port){
@@ -99,7 +104,7 @@ struct TcpServer{
     // std::string now_str = TimeNowString("%y%m%d%H%M%S");
     printf("AsyncTcpServ is starting...\n");
 
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    int sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
     if (sockfd < 0)
       fprintf(stderr, "ERROR opening socket");
 
@@ -121,26 +126,29 @@ struct TcpServer{
 
     *isTcpServ = true;
     while(*isTcpServ){
-      std::this_thread::sleep_for(std::chrono::microseconds(10000));
       sockaddr_in cli_addr;
       socklen_t clilen = sizeof(cli_addr);
 
       int sockfd_conn = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen); //wait for the connection
       if (sockfd_conn < 0){
-        fprintf(stderr, "ERROR on accept");
-        continue;
+        if( errno == EAGAIN  || errno == EWOULDBLOCK){
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+          continue;
+        }
+        fprintf(stderr, "ERROR on accept \n");
+        throw;
       }
 
       tcpConns.push_back(std::make_unique<TcpServerConn>(layer, sockfd_conn, cli_addr));
-      printf("new connection from 0%d.%d.%d.%d\n",
+      printf("new connection from %03d.%03d.%03d.%03d\n",
              (cli_addr.sin_addr.s_addr & 0xFF), (cli_addr.sin_addr.s_addr & 0xFF00) >> 8,
              (cli_addr.sin_addr.s_addr & 0xFF0000) >> 16, (cli_addr.sin_addr.s_addr & 0xFF000000) >> 24);
 
-      for(auto & conn: tcpConns){
-        if(conn && conn->isRunning){
-          conn.reset();
-        }
-      }// TODO: erase
+      // for(auto & conn: tcpConns){
+      //   if(conn && conn->isRunning){
+      //     conn.reset();
+      //   }
+      // }// TODO: erase
     }
 
     printf("AsyncTcpServ is removing connections...\n");
@@ -164,47 +172,47 @@ struct TcpClientConn{
     fut = std::async(std::launch::async, &TcpClientConn::AsyncTcpConn, &isRunning, host, port);
   }
   ~TcpClientConn(){
+    printf("TcpClientConn deconstructing\n");
     if(fut.valid()){
       isRunning = false;
       fut.get();
     }
+    printf("TcpClientConn deconstruction done\n");
   }
 
   static uint64_t AsyncTcpConn(bool* isTcpConn, const std::string& host, short int port){
     auto now = std::chrono::system_clock::now();
     auto now_c = std::chrono::system_clock::to_time_t(now);
-    printf("AsyncTcpServ is starting...\n");
+    printf("AsyncTcpClientConn is running...\n");
 
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
       fprintf(stderr, "ERROR opening socket");
 
-
     sockaddr_in serv_addr;
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
-    if(inet_pton(AF_INET, host.c_str(), &serv_addr.sin_addr)<=0)
-    {
-        printf("\nInvalid address/ Address not supported \n");
-        close(sockfd);
-        return -1;
-    }
-    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-    {
-        printf("\nConnection Failed \n");
-        close(sockfd);
-        return -1;
+    serv_addr.sin_addr.s_addr = inet_addr(host.c_str());
+    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
+      if(errno != EINPROGRESS){
+        std::fprintf(stderr, "ERROR<%s>: unable to start TCP connection, error code %i \n", __func__, errno);
+      }
+      if(errno == 29){
+        std::fprintf(stderr, "ERROR<%s>: TCP open timeout \n", __func__);
+      }
+      printf("\nConnection Failed \n");
+      close(sockfd);
+      return -1;
     }
 
     uint64_t n_ev = 0;
     *isTcpConn = true;
     while (*isTcpConn){
-      std::string raw_pack = readPack(sockfd, std::chrono::milliseconds(1000));
+      std::string raw_pack = readPack(sockfd, std::chrono::milliseconds(100));
       if(!raw_pack.empty()){
         printf("Client got raw pack: %s\n", StringToHexString(raw_pack).c_str());
         auto df =  std::make_shared<altel::DataFrame>(std::move(raw_pack));
-        
       }
     }
 
@@ -230,23 +238,50 @@ struct TcpClientConn{
     return CStringToHexString(bin.data(), bin.size());
   }
 
-  static std::string readPack(int fd_rx, const std::chrono::milliseconds &timeout_idel){ //timeout_read_interval
+  static std::string readPack(int fd_rx, const std::chrono::milliseconds &timeout_idle){ //timeout_read_interval
     size_t size_buf_min = 16;
     size_t size_buf = size_buf_min;
     std::string buf(size_buf, 0);
     size_t size_filled = 0;
-    std::chrono::system_clock::time_point tp_timeout_idel;
+    std::chrono::system_clock::time_point tp_timeout_idle;
     bool can_time_out = false;
     int read_len_real = 0;
     while(size_filled < size_buf){
-      read_len_real = read(fd_rx, &buf[size_filled], size_buf-size_filled);
+      fd_set fds;
+      timeval tv_timeout;
+      FD_ZERO(&fds);
+      FD_SET(fd_rx, &fds);
+      FD_SET(0, &fds);
+      tv_timeout.tv_sec = 0;
+      tv_timeout.tv_usec = 10;
+      if( !select(fd_rx+1, &fds, NULL, NULL, &tv_timeout) || !FD_ISSET(fd_rx, &fds) ){
+        if(!can_time_out){
+          can_time_out = true;
+          tp_timeout_idle = std::chrono::system_clock::now() + timeout_idle;
+        }
+        else if(std::chrono::system_clock::now() > tp_timeout_idle){
+          if(size_filled == 0){
+            // std::fprintf(stderr, "WARNING<%s>: timeout error of empty data reading \n", __func__ );
+            return std::string();
+          }
+          else{
+            std::fprintf(stderr, "ERROR<%s>: timeout error of incomplete data reading \n", __func__ );
+            return std::string();
+          }
+        }
+        continue; // loop untill timeout or data avalible
+      }
+      //we should have data by now.
+      // read_len_real = recv(fd_rx, &buf[0], (unsigned int)(size_buf), MSG_WAITALL);
+      // return std::string();
+
+      read_len_real = recv(fd_rx, &buf[size_filled], (unsigned int)(size_buf-size_filled), MSG_WAITALL);
       if(read_len_real>0){
         size_filled += read_len_real;
         can_time_out = false;
         if(size_buf == size_buf_min  && size_filled >= size_buf_min){
           uint8_t header_byte =  buf.front();
           uint32_t w1 = *reinterpret_cast<const uint32_t*>(buf.data()+4);
-
           uint32_t size_payload = (w1 & 0xfffff);
           if(header_byte != 0x5a){
             std::fprintf(stderr, "ERROR<%s>: wrong header of data frame, skip\n", __func__);
@@ -267,27 +302,11 @@ struct TcpClientConn{
           buf.resize(size_buf);
         }
       }
-      else if (read_len_real== 0 || (read_len_real < 0 && errno == EAGAIN)){ // empty readback, read again
-        if(!can_time_out){
-          can_time_out = true;
-          tp_timeout_idel = std::chrono::system_clock::now() + timeout_idel;
-        }
-        else{
-          if(std::chrono::system_clock::now() > tp_timeout_idel){
-            if(size_filled == 0){
-              return std::string();
-            }
-            //TODO: keep remain data, nothrow
-            std::fprintf(stderr, "ERROR<%s>: timeout error of incomplete data reading \n", __func__ );
-            std::fprintf(stderr, "=");
-            return std::string();
-            // throw;
-          }
-        }
+      else if( read_len_real == 0){
         continue;
       }
       else{
-        std::fprintf(stderr, "ERROR<%s>: read(...) returns error code %d\n", __func__,  errno);
+        std::fprintf(stderr, "ERROR<%s>: read(...) returns error code %d\n", __func__,  read_len_real);
         throw;
       }
     }
