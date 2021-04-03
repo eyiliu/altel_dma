@@ -26,6 +26,7 @@ Layer::Layer(){
 
 Layer::~Layer(){
 
+
   m_is_async_reading = false;
   if(m_fut_async_rd.valid())
     m_fut_async_rd.get();
@@ -231,12 +232,12 @@ uint64_t Layer::AsyncPushBack(){ // IMPROVE IT AS A RING
     if(tg_l16 != (tg_expected & 0xffff)){
       uint32_t tg_guess_0 = (tg_expected & 0xffff0000) + tg_l16;
       uint32_t tg_guess_1 = (tg_expected & 0xffff0000) + 0x10000 + tg_l16;
-      if(tg_guess_0 > tg_expected && tg_guess_0 - tg_expected < 200){
+      if(tg_guess_0 > tg_expected && tg_guess_0 - tg_expected < 0x8000){
 	info_print("missing trigger ID @dev#%-10" PRIu64 ", expecting %5hu,  provided %5hu\n",
 		   m_extension, tg_expected_l16,  tg_l16);
         tg_expected =tg_guess_0;
       }
-      else if (tg_guess_1 > tg_expected && tg_guess_1 - tg_expected < 200){
+      else if (tg_guess_1 > tg_expected && tg_guess_1 - tg_expected < 0x8000){
 	info_print("missing trigger ID @dev#%-10" PRIu64 ", expecting %5hu,  provided %5hu\n",
 		   m_extension, tg_expected_l16,  tg_l16);
 	tg_expected =tg_guess_1;
@@ -251,7 +252,7 @@ uint64_t Layer::AsyncPushBack(){ // IMPROVE IT AS A RING
       }
     }
     //TODO: fix tlu firmware, mismatch between modes AIDA start at 1, EUDET start at 0
-    df->SetTrigger(tg_expected); 
+    df->SetTrigger(tg_expected);
     m_st_n_tg_ev_now = tg_expected;
 
     m_vec_ring_ev[next_p_ring_write] = df;

@@ -3,6 +3,9 @@ add_custom_command(
   COMMAND echo "create ${CMAKE_CURRENT_BINARY_DIR}/include/altel_reg_cmd_list_json.hh"
   COMMAND ${CMAKE_COMMAND} -P ${PROJECT_SOURCE_DIR}/cmake/cpprawstring.cmake ${CMAKE_CURRENT_BINARY_DIR}/include/altel_reg_cmd_list_json.hh ${PROJECT_SOURCE_DIR}/source/lib/misc/altel_reg_cmd_list.json
   )
+
+
+
 add_custom_target(altelRegCmd_custom ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/include/altel_reg_cmd_list_json.hh)
 add_library(headerFileRegCmd INTERFACE)
 add_dependencies(headerFileRegCmd altelRegCmd_custom)
