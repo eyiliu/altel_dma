@@ -5,7 +5,6 @@
 
 #include <signal.h>
 
-
 #include "Layer.hh"
 
 #include "getopt.h"
@@ -179,7 +178,6 @@ int main(int argc, char **argv){
     else if ( std::regex_match(result, std::regex("\\s*(dump)\\s+(start)\\s*"))){
       if(layer)
         dummyDump = std::make_unique<DummyDump>(layer.get());
-
     }
     else if ( std::regex_match(result, std::regex("\\s*(dump)\\s+(stop)\\s*"))){
       dummyDump.reset();
@@ -235,8 +233,10 @@ int main(int argc, char **argv){
       }
     }
     else{
-      std::fprintf(stderr, "unknown command<%s>! consult possible commands by help....\n", result);
-      linenoisePreloadBuffer("help");
+      if(result[0]!='\n'){
+        std::fprintf(stderr, "unknown command<%s>! consult possible commands by help....\n", result);
+        linenoisePreloadBuffer("help");
+      }
     }
 
     linenoiseHistoryAdd(result);
@@ -297,5 +297,4 @@ struct DummyDump{
     printf("AsyncDump exited\n");
     return n_ev;
   }
-
 };

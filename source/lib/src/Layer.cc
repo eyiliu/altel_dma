@@ -93,9 +93,9 @@ void Layer::fw_conf(){
 }
 
 void Layer::fw_init(){
-  if(!m_fw) return;  
-  
-  m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0); // stop trigger, go into configure mode 
+  if(!m_fw) return;
+
+  m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0); // stop trigger, go into configure mode
   m_fw->SetFirmwareRegister("TRIG_DELAY", 1); //25ns per dig (FrameDuration?)
 
   //=========== init part ========================
@@ -201,7 +201,7 @@ uint64_t Layer::AsyncPushBack(){ // IMPROVE IT AS A RING
   m_st_n_ev_bad_now =0;
   m_st_n_ev_overflow_now =0;
   m_st_n_tg_ev_begin = 0;
-  
+
   while (m_is_async_reading){
     auto df = m_rd? m_rd->Read(std::chrono::seconds(1)):nullptr; // TODO: read a vector
     if(!df){
