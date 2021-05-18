@@ -49,8 +49,8 @@ public:
   static std::string LoadFileToString(const std::string& path);
 
 private:
-  void  WriteByte(uint64_t address, uint64_t value);
-  uint64_t ReadByte(uint64_t address);
+  void  WriteWord(uint64_t address, uint64_t value);
+  uint64_t ReadWord(uint64_t address);
   
   std::string m_alpide_ip_addr;
 
@@ -83,8 +83,6 @@ public:
     os<<formated_string<<std::flush;
     return formated_string.size();
   }
-
-
   
   template<typename T>
   static const std::string Stringify(const T& o){

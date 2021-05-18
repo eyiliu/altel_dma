@@ -25,12 +25,11 @@ FirmwarePortal::FirmwarePortal(const std::string &json_str){
   }
 }
 
-
 const std::string& FirmwarePortal::DeviceUrl(){
   return m_alpide_ip_addr;
 }
 
-void  FirmwarePortal::WriteByte(uint64_t address, uint64_t value){
+void  FirmwarePortal::WriteWord(uint64_t address, uint64_t value){
   DebugFormatPrint(std::cout, "INFO<%s>: %se( address=%#016llx ,  value=%#016llx )\n", __func__, __func__, address, value);
     
   int fd;
@@ -59,14 +58,14 @@ void  FirmwarePortal::WriteByte(uint64_t address, uint64_t value){
   }
 
   char* virt_addr = (char*)map_base + offset_in_page;
-  *virt_addr = (char)value;  
+  uint32_t* virt_addr_u32 = reinterpret_cast<uint32_t*>(virt_addr);
+  *virt_addr_u32 = (uint32_t)value;
 
   close(fd);
-
 };
 
-uint64_t FirmwarePortal::ReadByte(uint64_t address){
-  DebugFormatPrint(std::cout, "ReadByte( address=%#016x)\n", address);
+uint64_t FirmwarePortal::ReadWord(uint64_t address){
+  DebugFormatPrint(std::cout, "ReadWord( address=%#016x)\n", address);
 
   int fd;
   if ((fd = open("/dev/mem", O_RDWR|O_SYNC)) < 0 ) {
@@ -94,19 +93,19 @@ uint64_t FirmwarePortal::ReadByte(uint64_t address){
   }
 
   char* virt_addr = (char*)map_base + offset_in_page;
-  uint8_t reg_value = *virt_addr;  
+  uint32_t* virt_addr_u32 = reinterpret_cast<uint32_t*>(virt_addr);
+  uint32_t reg_value = *virt_addr_u32;  
 
   close(fd);
   
-  DebugFormatPrint(std::cout, "ReadByte( address=%#016x) return value=%#016x\n", address, reg_value);
+  DebugFormatPrint(std::cout, "ReadWord( address=%#016x) return value=%#016x\n", address, reg_value);
   return reg_value;
 };
 
 
-
 void FirmwarePortal::SetFirmwareRegister(const std::string& name, uint64_t value){
   DebugFormatPrint(std::cout, "INFO<%s>: %s( name=%s ,  value=%#016llx )\n", __func__, __func__, name.c_str(), value);
-  static const std::string array_name("FIRMWARE_REG_LIST_V3");
+  static const std::string array_name("FIRMWARE_REG_LIST_V4");
   auto& json_array = m_json[array_name];
   if(json_array.Empty()){
     FormatPrint(std::cerr, "ERROR<%s>:   unable to find array<%s>\n", __func__, array_name.c_str());
@@ -119,7 +118,7 @@ void FirmwarePortal::SetFirmwareRegister(const std::string& name, uint64_t value
     auto& json_addr = json_reg["address"];
     if(json_addr.IsString()){
       uint64_t address = std::stoull(json_reg["address"].GetString(), 0, 16);
-      WriteByte(address, value); //word = byte
+      WriteWord(address, value);
     }
     else if(json_addr.IsArray()){
       auto& json_bytes = json_reg["bytes"];
@@ -210,9 +209,8 @@ void FirmwarePortal::SetAlpideRegister(const std::string& name, uint64_t value){
     auto& json_addr = json_reg["address"];
     if(json_addr.IsString()){
       uint64_t address = std::stoull(json_reg["address"].GetString(), 0, 16);
-      SetFirmwareRegister("ADDR_CHIP_REG", address);
-      SetFirmwareRegister("DATA_WRITE", value);
-      SendFirmwareCommand("WRITE");
+      SetFirmwareRegister("DET_WRITE_DATA", value);
+      SetFirmwareRegister("DET_WRITE_ADDR", address);
     }
     else if(json_addr.IsArray()){
       auto& json_bytes = json_reg["bytes"];
@@ -289,7 +287,7 @@ void FirmwarePortal::SetAlpideRegister(const std::string& name, uint64_t value){
 
 void FirmwarePortal::SendFirmwareCommand(const std::string& name){
   DebugFormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
-  static const std::string array_name("FIRMWARE_CMD_LIST_V3");
+  static const std::string array_name("FIRMWARE_CMD_LIST_V4");
   auto& json_array = m_json[array_name];
   if(json_array.Empty()){
     FormatPrint(std::cerr, "ERROR<%s>:   unable to find array<%s>\n", __func__, array_name.c_str());
@@ -305,7 +303,7 @@ void FirmwarePortal::SendFirmwareCommand(const std::string& name){
       throw;
     }
     uint64_t cmd_value = std::stoull(json_value.GetString(),0,16);
-    SetFirmwareRegister("FIRMWARE_CMD", cmd_value);
+    SetFirmwareRegister("DAQ_CMD", cmd_value);
     flag_found_cmd = true;
   }
   if(!flag_found_cmd){
@@ -360,8 +358,7 @@ void FirmwarePortal::SendAlpideBroadcast(const std::string& name){
       throw;
     }
     uint64_t cmd_value = std::stoull(json_value.GetString(),0,16);
-    SetFirmwareRegister("BROADCAST_OPCODE", cmd_value);
-    SendFirmwareCommand("BROADCAST");
+    SetFirmwareRegister("DET_CMD_OPCODE", cmd_value);
     flag_found_cmd = true;
   }
   if(!flag_found_cmd){
@@ -373,7 +370,7 @@ void FirmwarePortal::SendAlpideBroadcast(const std::string& name){
 
 uint64_t FirmwarePortal::GetFirmwareRegister(const std::string& name){
   DebugFormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
-  static const std::string array_name("FIRMWARE_REG_LIST_V3");
+  static const std::string array_name("FIRMWARE_REG_LIST_V4");
   auto& json_array = m_json[array_name];
   if(json_array.Empty()){
     FormatPrint(std::cerr, "ERROR<%s>:   unable to find array<%s>\n", __func__, array_name.c_str());
@@ -387,7 +384,7 @@ uint64_t FirmwarePortal::GetFirmwareRegister(const std::string& name){
     auto& json_addr = json_reg["address"];
     if(json_addr.IsString()){
       uint64_t address = std::stoull(json_reg["address"].GetString(), 0, 16);
-      value = ReadByte(address);
+      value = ReadWord(address);
     }
     else if(json_addr.IsArray()){
       auto& json_bytes = json_reg["bytes"];
@@ -483,9 +480,8 @@ uint64_t FirmwarePortal::GetAlpideRegister(const std::string& name){
     auto& json_addr = json_reg["address"];
     if(json_addr.IsString()){
       uint64_t address = std::stoull(json_reg["address"].GetString(), 0, 16);
-      SetFirmwareRegister("ADDR_CHIP_REG", address);
-      uint64_t nr_old = GetFirmwareRegister("COUNT_READ");
-      SendFirmwareCommand("READ");
+      uint64_t nr_old = GetFirmwareRegister("DET_READ_CNT");
+      SetFirmwareRegister("DET_READ_ADDR", address);
       std::chrono::system_clock::time_point  tp_timeout = std::chrono::system_clock::now() +  std::chrono::milliseconds(1000);
       bool flag_enable_counter_check = true; //TODO: enable it for a real hardware;
       if(!flag_enable_counter_check){
@@ -493,7 +489,7 @@ uint64_t FirmwarePortal::GetAlpideRegister(const std::string& name){
 	FormatPrint(std::cout, "WARN<%s>: checking of the read count is disabled\n", __func__);
       }
       while(flag_enable_counter_check){
-	uint64_t nr_new = GetFirmwareRegister("COUNT_READ");
+	uint64_t nr_new = GetFirmwareRegister("DET_READ_CNT");
 	if(nr_new != nr_old){
 	  break;
 	}
@@ -503,7 +499,7 @@ uint64_t FirmwarePortal::GetAlpideRegister(const std::string& name){
 	  throw;
 	}
       }
-      value = GetFirmwareRegister("DATA_READ");
+      value = GetFirmwareRegister("DET_READ_DATA");
     }
     else if(json_addr.IsArray()){
       auto& json_bytes = json_reg["bytes"];
@@ -614,9 +610,8 @@ void FirmwarePortal::SetRegionRegister(uint64_t region, const std::string& name,
     if(json_addr.IsString()){
       uint64_t address_region_local = (std::stoull(json_reg["address"].GetString(), 0, 16)) & 0x07ff;
       uint64_t address = (region << 11) + address_region_local;
-      SetFirmwareRegister("ADDR_CHIP_REG", address);
-      SetFirmwareRegister("DATA_WRITE", value);
-      SendFirmwareCommand("WRITE");
+      SetFirmwareRegister("DET_WRITE_DATA", value);
+      SetFirmwareRegister("DET_WRITE_ADDR", address);
     }
     else if(json_addr.IsArray()){
       auto& json_bytes = json_reg["bytes"];
@@ -709,9 +704,8 @@ void FirmwarePortal::BroadcastRegionRegister(const std::string& name, uint64_t v
     if(json_addr.IsString()){
       uint64_t address_region_local = (std::stoull(json_reg["address"].GetString(), 0, 16)) & 0x07ff;
       uint64_t address = address_region_local | 0x80; // 0b1000 0000 broadcast_bit
-      SetFirmwareRegister("ADDR_CHIP_REG", address);
-      SetFirmwareRegister("DATA_WRITE", value);
-      SendFirmwareCommand("WRITE");
+      SetFirmwareRegister("DET_WRITE_DATA", value);
+      SetFirmwareRegister("DET_WRITE_ADDR", address);
     }
     else if(json_addr.IsArray()){
       auto& json_bytes = json_reg["bytes"];
@@ -910,9 +904,8 @@ uint64_t FirmwarePortal::GetRegionRegister(uint64_t region, const std::string& n
       uint64_t address = (region << 11) + address_region_local;
       FormatPrint(std::cout, "INFO<%s>: %u(%#x)    %u(%#x) )\n", __func__, address, address, address_region_local, address_region_local);
 
-      SetFirmwareRegister("ADDR_CHIP_REG", address);
-      uint64_t nr_old = GetFirmwareRegister("COUNT_READ");
-      SendFirmwareCommand("READ");
+      uint64_t nr_old = GetFirmwareRegister("DET_READ_CNT");
+      SetFirmwareRegister("DET_READ_ADDR", address);
       std::chrono::system_clock::time_point  tp_timeout = std::chrono::system_clock::now() +  std::chrono::milliseconds(1000);
       bool flag_enable_counter_check = true; //TODO: enable it for a real hardware;
       if(!flag_enable_counter_check){
@@ -920,7 +913,7 @@ uint64_t FirmwarePortal::GetRegionRegister(uint64_t region, const std::string& n
 	FormatPrint(std::cout, "WARN<%s>: checking of the read count is disabled\n", __func__);
       }
       while(flag_enable_counter_check){
-	uint64_t nr_new = GetFirmwareRegister("COUNT_READ");
+	uint64_t nr_new = GetFirmwareRegister("DET_READ_CNT");
 	if(nr_new != nr_old){
 	  break;
 	}
@@ -930,7 +923,7 @@ uint64_t FirmwarePortal::GetRegionRegister(uint64_t region, const std::string& n
 	  throw;
 	}
       }
-      value = GetFirmwareRegister("DATA_READ");
+      value = GetFirmwareRegister("DET_READ_DATA");
     }
     else if(json_addr.IsArray()){
       auto& json_bytes = json_reg["bytes"];
@@ -1016,5 +1009,3 @@ void FirmwarePortal::InjectPulse(){
   SetAlpideRegister("FROMU_PULSING_2", 0xff); // duration  
   SendAlpideBroadcast("PULSE");
 }
-
-
