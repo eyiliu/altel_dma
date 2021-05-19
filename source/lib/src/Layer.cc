@@ -42,14 +42,14 @@ void Layer::fw_start(){
   m_fw->SetAlpideRegister("CMU_DMU_CONF", 0x70);// token
   m_fw->SetAlpideRegister("CHIP_MODE", 0x3d); //trigger MODE
   m_fw->SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset, commit token
-  m_fw->SetFirmwareRegister("FIRMWARE_MODE", 1); //run, fw forward trigger
+  m_fw->SendFirmwareCommand("TRIGGER_ALLOW"); //run, fw forward trigger
   info_print( " fw start %s\n", m_fw->DeviceUrl().c_str());
 }
 
 
 void Layer::fw_stop(){
   if(!m_fw) return;
-  m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0); // stop trigger, fw goes into configure mode 
+  m_fw->SendFirmwareCommand("TRIGGER_VETO"); // stop trigger, fw goes into configure mode 
   m_fw->SetAlpideRegister("CHIP_MODE", 0x3c); // sensor goes to configure mode
 
   info_print(" fw stop  %s\n", m_fw->DeviceUrl().c_str());
@@ -94,15 +94,12 @@ void Layer::fw_conf(){
 
 void Layer::fw_init(){
   if(!m_fw) return;
-
-  m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0); // stop trigger, go into configure mode
-  m_fw->SetFirmwareRegister("TRIG_DELAY", 1); //25ns per dig (FrameDuration?)
+  m_fw->SendFirmwareCommand("TRIGGER_VETO");
+  // stop trigger, go into configure mode
 
   //=========== init part ========================
   // 3.8 Chip initialization
   // GRST
-  m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0);
-  m_fw->SetFirmwareRegister("ADDR_CHIP_ID", 0x10); //OB
   m_fw->SendAlpideBroadcast("GRST"); // chip global reset
   m_fw->SetAlpideRegister("CHIP_MODE", 0x3c); // configure mode
   // DAC setup
@@ -152,7 +149,7 @@ void Layer::fw_init(){
   //user init
   //
   //
-  m_fw->SetFirmwareRegister("DEVICE_ID", 0xff);
+  // m_fw->SetFirmwareRegister("DEVICE_ID", 0xff);
   //
   //end of user init
 
