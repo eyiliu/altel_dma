@@ -15,7 +15,7 @@ typedef msgpack::unique_ptr<msgpack::zone> unique_zone;
 class TcpConnection;
 
 //callback
-typedef int (*FunProcessMessage)(msgpack::object_handle& );
+typedef int (*FunProcessMessage)(msgpack::object_handle&);
 
 class TcpConnection{
 public:

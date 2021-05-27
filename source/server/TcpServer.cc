@@ -7,8 +7,12 @@
 #include "TcpConnection.hh"
 
 TcpServer::TcpServer(short int port, FunProcessMessage recvFun){
+  m_fw.fw_init();
+  m_fw.fw_start();
+  m_rd.Open();
+  
   m_isActive = true;
-  m_fut = std::async(std::launch::async, &TcpServer::threadClientMananger, &m_isActive, port, recvFun);
+  m_fut = std::async(std::launch::async, &TcpServer::threadClientMananger, port);
 }
 
 TcpServer::~TcpServer(){
@@ -20,46 +24,52 @@ TcpServer::~TcpServer(){
   printf("TcpServer deconstruction done\n");
 }
 
-uint64_t TcpServer::threadClientMananger(bool* isTcpServ, short int port, FunProcessMessage recvFun){
-  *isTcpServ = true;
+uint64_t TcpServer::threadClientMananger(short int port){
+  m_isActive = true;
   int sockfd = TcpConnection::createServerSocket(port);
   if(sockfd<0){
     printf("unable to create server listenning socket\n");
-    *isTcpServ = false;
+    m_isActive = false;
   }
 
-  printf("creating pool for incomming client connections\n");
-  std::vector<std::unique_ptr<TcpConnection>> tcpConns;
-
-  while(*isTcpServ){
-    auto newConn = TcpConnection::waitForNewClient(sockfd, std::chrono::seconds(1), recvFun);
-    if(newConn){
-      printf("add new client connection\n");
-      tcpConns.push_back(std::move(newConn));
+  std::future<int64_t> fut_send;
+  
+  while(m_isActive){
+    if( (!m_conn) || (m_conn && !(**m_conn)) ){
+      m_conn = TcpConnection::waitForNewClient(sockfd, std::chrono::seconds(1), &TcpServer::processMessage);
+      fut_send = std::async(std::launch::async, &TcpServer::threadConnectionSend, this);
     }
-
-    for(auto itConnUP = tcpConns.begin(); itConnUP != tcpConns.end(); ++itConnUP){
-      if(*itConnUP && !(**itConnUP)){
-        itConnUP->reset();
-      }
-    }
-    bool isNeedUpdate = true;
-    while(isNeedUpdate){
-      isNeedUpdate = false;
-      for(auto itConnUP = tcpConns.begin(); itConnUP != tcpConns.end(); ++itConnUP){
-        if(!(*itConnUP)){
-          tcpConns.erase(itConnUP);
-          isNeedUpdate = true;
-          break;
-        }
-      }
-    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
-  printf("removing all client connections...\n");
-  tcpConns.clear();
+
   if(sockfd>=0){
     close(sockfd);
   }
   printf("server is closed\n");
   return 0;
+}
+
+int TcpServer::processMessage(msgpack::object_handle &oh){ // for command
+  std::cout << "TcpServer processMessage: " << oh.get() << std::endl;
+  return 0;
+}
+
+int64_t TcpServer::threadConnectionSend(){
+  while(m_isActive){
+    std::string dataraw = m_rd->readPack(m_fd, std::chrono::milliseconds(1000));
+    std::stringstream ssbuf;
+    std::string strbuf;
+    msgpack::packer<std::stringstream> pk(ssbuf);
+    pk.pack_map(1);
+    const std::string msgkey_data("data");
+    pk.pack_str(msgkey_data.size());
+    pk.pack_str_body(msgkey_data.data(), msgkey_data.size());
+    pk.pack_bin(dataraw.size());
+    pk.pack_bin_body(dataraw.data(), dataraw.size());
+    strbuf = ssbuf.str();
+    if(m_conn){
+      m_conn->sendRaw(strbuf.data(), strbuf.size());
+    }
+  }
+  return 0; 
 }
