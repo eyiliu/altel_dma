@@ -1009,3 +1009,76 @@ void FirmwarePortal::InjectPulse(){
   SetAlpideRegister("FROMU_PULSING_2", 0xff); // duration  
   SendAlpideBroadcast("PULSE");
 }
+
+void FirmwarePortal::fw_init(){
+  SendFirmwareCommand("TRIGGER_VETO");
+  // stop trigger, go into configure mode
+
+  //=========== init part ========================
+  // 3.8 Chip initialization
+  // GRST
+  SendAlpideBroadcast("GRST"); // chip global reset
+  SetAlpideRegister("CHIP_MODE", 0x3c); // configure mode
+  // DAC setup
+  SetAlpideRegister("VRESETP", 0x75); //117
+  SetAlpideRegister("VRESETD", 0x93); //147
+  SetAlpideRegister("VCASP", 0x56);   //86
+  uint32_t vcasn = 57;
+  uint32_t ithr  = 51;
+  SetAlpideRegister("VCASN", vcasn);   //57 Y50
+  SetAlpideRegister("VPULSEH", 0xff); //255
+  SetAlpideRegister("VPULSEL", 0x0);  //0
+  SetAlpideRegister("VCASN2",vcasn+12);  //62 Y63  VCASN+12
+  SetAlpideRegister("VCLIP", 0x0);    //0
+  SetAlpideRegister("VTEMP", 0x0);
+  SetAlpideRegister("IAUX2", 0x0);
+  SetAlpideRegister("IRESET", 0x32);  //50
+  SetAlpideRegister("IDB", 0x40);     //64
+  SetAlpideRegister("IBIAS", 0x40);   //64
+  SetAlpideRegister("ITHR", ithr);   //51  empty 0x32; 0x12 data, not full.  0x33 default, threshold
+  // 3.8.1 Configuration of in-pixel logic
+  SendAlpideBroadcast("PRST");  //pixel matrix reset
+  SetPixelRegisterFullChip("MASK_EN", 0);
+  SetPixelRegisterFullChip("PULSE_EN", 0);
+  SendAlpideBroadcast("PRST");  //pixel matrix reset
+  // 3.8.2 Configuration and start-up of the Data Transmission Unit, PLL
+  SetAlpideRegister("DTU_CONF", 0x008d); // default
+  SetAlpideRegister("DTU_DAC",  0x0088); // default
+  SetAlpideRegister("DTU_CONF", 0x0085); // clear pll disable bit
+  SetAlpideRegister("DTU_CONF", 0x0185); // set pll reset bit
+  SetAlpideRegister("DTU_CONF", 0x0085); // clear reset bit
+  // 3.8.3 Setting up of readout
+  // 3.8.3.1a (OB) Setting CMU and DMU Configuration Register
+  SetAlpideRegister("CMU_DMU_CONF", 0x70); //Token, disable MCH, enable DDR, no previous OB
+  SetAlpideRegister("TEST_CTRL", 0x400); //Disable Busy Line
+  // 3.8.3.2 Setting FROMU Configuration Registers and enabling readout mode
+  // FROMU Configuration Register 1,2
+  SetAlpideRegister("FROMU_CONF_1", 0x00); //Disable external busy, no triger delay
+  SetAlpideRegister("FROMU_CONF_2", 20); //STROBE duration, alice testbeam 100
+  // FROMU Pulsing Register 1,2
+  // m_fw->SetAlpideRegister("FROMU_PULSING_2", 0xffff); //yiliu: test pulse duration, max
+  // Periphery Control Register (CHIP MODE)
+  // m_fw->SetAlpideRegister("CHIP_MODE", 0x3d); //trigger MODE
+  // RORST
+  // m_fw->SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset, commit token
+  //===========end of init part =====================
+
+  //user init
+  //
+  //
+  // m_fw->SetFirmwareRegister("DEVICE_ID", 0xff);
+  //
+  //end of user init
+}
+
+void FirmwarePortal::fw_start(){
+  SetAlpideRegister("CMU_DMU_CONF", 0x70);// token
+  SetAlpideRegister("CHIP_MODE", 0x3d); //trigger MODE
+  SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset, commit token
+  SendFirmwareCommand("TRIGGER_ALLOW"); //run, fw forward trigger
+}
+
+void FirmwarePortal::fw_stop(){
+  SendFirmwareCommand("TRIGGER_VETO"); // stop trigger, fw goes into configure mode 
+  SetAlpideRegister("CHIP_MODE", 0x3c); // sensor goes to configure mode
+}

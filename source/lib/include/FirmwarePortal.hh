@@ -44,6 +44,11 @@ public:
   
   void InjectPulse();// test only, to be removed
   
+
+  void fw_init();
+  void fw_start();
+  void fw_stop();
+
   const std::string& DeviceUrl();
   
   static std::string LoadFileToString(const std::string& path);

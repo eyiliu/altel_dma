@@ -18,6 +18,10 @@ public:
   std::vector<DataFrameSP> Read(size_t size_max_pkg,
                                 const std::chrono::milliseconds &timeout_idle,
                                 const std::chrono::milliseconds &timeout_total);
+
+
+  std::string readPack(const std::chrono::milliseconds &timeout_idel);
+    
   bool Open();
   void Close();
   static std::string LoadFileToString(const std::string& path);

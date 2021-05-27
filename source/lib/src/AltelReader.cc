@@ -217,3 +217,7 @@ std::string AltelReader::LoadFileToString(const std::string& path){
              (std::istreambuf_iterator<char>()));
   return str;
 }
+
+std::string AltelReader::readPack(const std::chrono::milliseconds &timeout_idel){ //timeout_read_interval
+  return readPack(m_fd, timeout_idel);
+}
