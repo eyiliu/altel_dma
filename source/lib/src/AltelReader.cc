@@ -218,6 +218,6 @@ std::string AltelReader::LoadFileToString(const std::string& path){
   return str;
 }
 
-std::string AltelReader::readPack(const std::chrono::milliseconds &timeout_idel){ //timeout_read_interval
+std::string AltelReader::readRawPack(const std::chrono::milliseconds &timeout_idel){ //timeout_read_interval
   return readPack(m_fd, timeout_idel);
 }

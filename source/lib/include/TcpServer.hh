@@ -27,9 +27,9 @@ public:
   ~TcpServer();
 
   uint64_t threadClientMananger(short int port);
-  int64_t TcpServer::threadConnectionSend();
+  int64_t threadConnectionSend();
 
-  static int TcpServer::processMessage(msgpack::object_handle &oh);
+  static int processMessage(msgpack::object_handle &oh);
 
 private:
   std::future<uint64_t> m_fut;

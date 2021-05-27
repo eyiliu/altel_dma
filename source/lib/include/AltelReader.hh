@@ -20,7 +20,7 @@ public:
                                 const std::chrono::milliseconds &timeout_total);
 
 
-  std::string readPack(const std::chrono::milliseconds &timeout_idel);
+  std::string readRawPack(const std::chrono::milliseconds &timeout_idel);
     
   bool Open();
   void Close();

@@ -24,7 +24,6 @@
 #include <msgpack.hpp>
 typedef msgpack::unique_ptr<msgpack::zone> unique_zone;
 
-
 void  WriteWord(uint64_t address, uint64_t value){
 
   int fd;
@@ -56,7 +55,7 @@ void  WriteWord(uint64_t address, uint64_t value){
   *virt_addr_u32 = (uint32_t)value;
 
   printf("value %#lX", (uint32_t)value);
-  
+
   close(fd);
 
 };
@@ -87,9 +86,8 @@ uint64_t ReadWord(uint64_t address){
 
   char* virt_addr = (char*)map_base + offset_in_page;
   uint32_t* virt_addr_u32 = reinterpret_cast<uint32_t*>(virt_addr);
-  uint32_t reg_value = *virt_addr_u32;  
+  uint32_t reg_value = *virt_addr_u32;
 
-  
   close(fd);
   return reg_value;
 };
@@ -140,16 +138,15 @@ struct TcpServerConn{
       FD_SET(sockfd, &fds);
       FD_SET(0, &fds);
       if(!select(sockfd+1, &fds, NULL, NULL, &tv_timeout) || !FD_ISSET(sockfd, &fds) ){
-	// std::fprintf(stderr, "WARNING<%s>: timeout error of empty data reading \n", __func__ );
         continue;
       }
       unp.reserve_buffer(4096);
       int count = recv(sockfd, unp.buffer(), (unsigned int)(unp.buffer_capacity()), MSG_WAITALL);
       if(count== 0 && errno != EWOULDBLOCK && errno != EAGAIN){
-	*isTcpConn = false; // closed connection
-	break;
+        *isTcpConn = false; // closed connection
+        std::printf("connection is closed by remote peer\n");
+        break;
       }
-      
       unp.buffer_consumed(count);
       msgpack::object_handle oh; // keep zone for reference.
       while (unp.next(oh)){
@@ -157,16 +154,18 @@ struct TcpServerConn{
         std::cout << "message received: " << msg << std::endl;
         mesgCmd cmd = msg.as<mesgCmd>();
         std::cout<< cmd.device<<" " << cmd.method<<" " <<cmd.offset <<" "<< cmd.value<<std::endl;
-       
-	
+
         if(cmd.device == "memory" && cmd.method == "read"){
-          ReadWord(cmd.offset);
+          uint64_t value = ReadWord(cmd.offset);
+          
+
+          
         }
         if(cmd.device == "memory" && cmd.method == "write"){
-	  std::cout<< "mem write,>>>>"<<std::endl;
-	  printf("addr %#lX,  value %#lX", cmd.offset , cmd.value);
+          std::cout<< "mem write,>>>>"<<std::endl;
+          printf("addr %#lX,  value %#lX", cmd.offset , cmd.value);
 
-	  WriteWord(cmd.offset, cmd.value);
+          WriteWord(cmd.offset, cmd.value);
         }
 // process_message(msg, life);
       }
@@ -351,6 +350,11 @@ struct TcpConnnection{
       }
       unp.reserve_buffer(4096);
       int count = recv(m_sockfd, unp.buffer(), (unsigned int)(unp.buffer_capacity()), MSG_WAITALL);
+      if(count== 0 && errno != EWOULDBLOCK && errno != EAGAIN){
+        m_isAlive = false; // closed connection
+        std::printf("connection is closed by remote peer\n");
+        break;
+      }
       unp.buffer_consumed(count);
       msgpack::object_handle oh;
       while (unp.next(oh)) {
