@@ -8,6 +8,8 @@ target_link_libraries(regctrl_only_main PRIVATE altel-rbcp mycommon)
 add_executable(testserver testserver.cc)
 target_link_libraries(testserver PRIVATE altel-rbcp mycommon)
 
+add_executable(testclient testclient.cc)
+target_link_libraries(testclient PRIVATE altel-rbcp mycommon)
 
 add_executable(dmarx_dump dmarx_dump.cc)
 
@@ -17,7 +19,7 @@ target_include_directories(dmarx_dump
   )
 target_link_libraries(dmarx_dump PRIVATE mycommon stdc++fs Threads::Threads)
 
-install(TARGETS regctrl_main dmarx_dump regctrl_only_main  testserver
+install(TARGETS regctrl_main dmarx_dump regctrl_only_main  testserver testclient
   EXPORT ${PROJECT_NAME}Targets
   RUNTIME       DESTINATION bin      COMPONENT runtime
   LIBRARY       DESTINATION lib      COMPONENT runtime

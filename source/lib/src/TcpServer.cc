@@ -8,6 +8,8 @@
 #include "TcpConnection.hh"
 
 TcpServer::TcpServer(short int port){
+  // m_fw.fw_init();
+  // m_fw.fw_start();
   m_rd.Open();
   m_isActive = true;
   m_fut = std::async(std::launch::async, &TcpServer::threadClientMananger, this, port);
@@ -55,8 +57,9 @@ uint64_t TcpServer::threadClientMananger(short int port){
 
 
 int TcpServer::perConnProcessMessage(void* pconn, msgpack::object_handle &oh){
-  std::cout << "TcpServer processMessage: " << oh.get() << std::endl;
-  auto& msg = oh.get();
+  msgpack::object msg = oh.get();
+  unique_zone& life = oh.zone();
+  std::cout << "TcpServer processMessage: " << msg << std::endl;
   NetMsg netmsg = msg.as<NetMsg>();
   std::cout<< netmsg.type<<" " << netmsg.device<<" " <<netmsg.address <<" "<< netmsg.value<<" "<<std::endl;
   std::cout<< "bin "<<TcpConnection::binToHexString(netmsg.bin.data(),netmsg.bin.size())<<std::endl;
@@ -89,22 +92,35 @@ int TcpServer::perConnProcessMessage(void* pconn, msgpack::object_handle &oh){
 
 int TcpServer::perConnSendDeamon(void  *pconn){
   TcpConnection* conn = reinterpret_cast<TcpConnection*>(pconn);
+  // std::cout<<">>>>>>>>TcpServer::perConnSendDeamon start"<<std::endl;
+  std::stringstream ssbuf;
+  std::string strbuf;
   while((*conn)){
     std::string dataraw = m_rd.readRawPack(std::chrono::milliseconds(1000));
-    if(dataraw.empty())
+    if(dataraw.empty()){
+      // std::cout<<"empty pack"<<std::endl;
       continue;
+    }
 
-    std::stringstream ssbuf;
-    std::string strbuf;
-    msgpack::packer<std::stringstream> pk(ssbuf);
-    pk.pack_map(1);
-    const std::string msgkey_data("data");
-    pk.pack_str(msgkey_data.size());
-    pk.pack_str_body(msgkey_data.data(), msgkey_data.size());
-    pk.pack_bin(dataraw.size());
-    pk.pack_bin_body(dataraw.data(), dataraw.size());
+    // std::cout<< "got somethin"<<std::endl;
+    NetMsg dataMsg{NetMsg::data, 0, 0, 0, {std::vector<char>(dataraw.begin(), dataraw.end())}};
+    ssbuf.str(std::string());
+    msgpack::pack(ssbuf, dataMsg);
     strbuf = ssbuf.str();
     conn->sendRaw(strbuf.data(), strbuf.size());
+
+    // std::stringstream ssbuf;
+    // std::string strbuf;
+    // msgpack::packer<std::stringstream> pk(ssbuf);
+    // pk.pack_map(1);
+    // const std::string msgkey_data("data");
+    // pk.pack_str(msgkey_data.size());
+    // pk.pack_str_body(msgkey_data.data(), msgkey_data.size());
+    // pk.pack_bin(dataraw.size());
+    // pk.pack_bin_body(dataraw.data(), dataraw.size());
+    // strbuf = ssbuf.str();
+    // conn->sendRaw(strbuf.data(), strbuf.size());
   }
+  // std::cout<<">>>>>>>>TcpServer::perConnSendDeamon stop"<<std::endl;
   return 0;
 }

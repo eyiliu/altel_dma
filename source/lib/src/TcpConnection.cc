@@ -14,6 +14,7 @@
 TcpConnection::TcpConnection(int sockfd, FunProcessMessage recvFun,  FunSendDeamon sendFun, void* pobj){
   m_sockfd = sockfd;
   if(m_sockfd>=0){
+    m_isAlive = true;
     if(recvFun)
       m_fut = std::async(std::launch::async, &TcpConnection::threadConnRecv, this, recvFun, pobj);
     if(sendFun)
