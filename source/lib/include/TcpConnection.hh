@@ -15,21 +15,23 @@ typedef msgpack::unique_ptr<msgpack::zone> unique_zone;
 class TcpConnection;
 
 //callback
-typedef int (*FunProcessMessage)(msgpack::object_handle&);
+typedef int (*FunProcessMessage)(void* pobj, void* pconn,  msgpack::object_handle&);
+typedef int (*FunSendDeamon)(void* pobj, void*pconn);
+
 
 class TcpConnection{
 public:
   TcpConnection() = delete;
   TcpConnection(const TcpConnection&) =delete;
   TcpConnection& operator=(const TcpConnection&) =delete;
-  TcpConnection(int sockfd, FunProcessMessage recvFun);
+  TcpConnection(int sockfd, FunProcessMessage recvFun, FunSendDeamon sendFun, void* pobj);
 
   ~TcpConnection();
 
   operator bool() const;
 
   //forked thread
-  uint64_t threadConnRecv(FunProcessMessage recvFun);
+  uint64_t threadConnRecv(FunProcessMessage recvFun, void* pobj);
 
   void sendRaw(const char* buf, size_t len);
 
@@ -38,17 +40,18 @@ public:
   static void closeSocket(int& sockfd);
 
   //client side
-  static std::unique_ptr<TcpConnection> connectToServer(const std::string& host,  short int port, FunProcessMessage recvFun);
+  static std::unique_ptr<TcpConnection> connectToServer(const std::string& host,  short int port, FunProcessMessage recvFun, FunSendDeamon sendFun, void* pobj);
   //server side
   static int createServerSocket(short int port);
-  static std::unique_ptr<TcpConnection> waitForNewClient(int sockfd, const std::chrono::milliseconds &timeout, FunProcessMessage recvFun);
+  static std::unique_ptr<TcpConnection> waitForNewClient(int sockfd, const std::chrono::milliseconds &timeout, FunProcessMessage recvFun, FunSendDeamon sendFun, void* pobj);
 
   //test
-  static int processMessageServerTest(msgpack::object_handle& oh);
-  static int processMessageClientTest(msgpack::object_handle& oh);
+  static int processMessageServerTest(void* pobj, void* pconn, msgpack::object_handle& oh);
+  static int processMessageClientTest(void* pobj, void* pconn, msgpack::object_handle& oh);
 
 private:
   std::future<uint64_t> m_fut;
+  std::future<int> m_fut_send;
   bool m_isAlive{false};
   int m_sockfd{-1};
 };

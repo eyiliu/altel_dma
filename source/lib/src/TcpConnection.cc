@@ -11,11 +11,14 @@
 
 #include "TcpConnection.hh"
 
-TcpConnection::TcpConnection(int sockfd, FunProcessMessage recvFun){
+TcpConnection::TcpConnection(int sockfd, FunProcessMessage recvFun,  FunSendDeamon sendFun, void* pobj){
   m_sockfd = sockfd;
-  if(m_sockfd>=0)
-    m_fut = std::async(std::launch::async, &TcpConnection::threadConnRecv, this, recvFun);
-
+  if(m_sockfd>=0){
+    if(recvFun)
+      m_fut = std::async(std::launch::async, &TcpConnection::threadConnRecv, this, recvFun, pobj);
+    if(sendFun)
+      m_fut_send = std::async(std::launch::async, sendFun, pobj, this);
+  }
   printf("TcpConnnection construction done\n");
 }
 
@@ -25,6 +28,10 @@ TcpConnection::~TcpConnection(){
     m_isAlive = false;
     m_fut.get();
   }
+  if(m_fut_send.valid()){
+    m_fut_send.get();
+  }
+  closeSocket(m_sockfd);
   printf("TcpConnnection deconstruction done\n");
 }
 
@@ -32,7 +39,7 @@ TcpConnection::operator bool() const {
   return m_isAlive;
 }
 
-uint64_t TcpConnection::threadConnRecv(FunProcessMessage processMessage){
+uint64_t TcpConnection::threadConnRecv(FunProcessMessage processMessage, void* pobj){
   msgpack::unpacker unp;
   msgpack::object_handle oh;
 
@@ -62,7 +69,7 @@ uint64_t TcpConnection::threadConnRecv(FunProcessMessage processMessage){
 
     unp.buffer_consumed(count);
     while (unp.next(oh)){
-      int re = (*processMessage)(oh);
+      int re = (*processMessage)(pobj, this, oh);
       if(re < 0){
         std::fprintf(stderr, "error: processMessage return error \n");
         m_isAlive = false;
@@ -76,12 +83,11 @@ uint64_t TcpConnection::threadConnRecv(FunProcessMessage processMessage){
     }
   }
   m_isAlive = false;
-  closeSocket(m_sockfd);
   printf("threadConnRecv exited\n");
   return 0;
 }
 
-int TcpConnection::processMessageClientTest(msgpack::object_handle& oh){
+int TcpConnection::processMessageClientTest(void* ,void* pconn, msgpack::object_handle& oh){
   msgpack::object msg = oh.get();
   unique_zone& life = oh.zone();
   std::cout << "client processMessage: " << msg << std::endl;
@@ -89,7 +95,7 @@ int TcpConnection::processMessageClientTest(msgpack::object_handle& oh){
 }
 
 
-int TcpConnection::processMessageServerTest(msgpack::object_handle& oh){
+int TcpConnection::processMessageServerTest(void* ,void* pconn, msgpack::object_handle& oh){
   msgpack::object msg = oh.get();
   unique_zone& life = oh.zone();
   std::cout << "server processMessage: " << msg << std::endl;
@@ -116,7 +122,7 @@ void TcpConnection::sendRaw(const char* buf, size_t len){
   }
 }
 
-std::unique_ptr<TcpConnection> TcpConnection::connectToServer(const std::string& host,  short int port, FunProcessMessage recvFun){
+std::unique_ptr<TcpConnection> TcpConnection::connectToServer(const std::string& host,  short int port, FunProcessMessage recvFun, FunSendDeamon sendFun, void* pobj){
   auto now = std::chrono::system_clock::now();
   auto now_c = std::chrono::system_clock::to_time_t(now);
   printf("AsyncTcpClientConn is running...\n");
@@ -142,7 +148,7 @@ std::unique_ptr<TcpConnection> TcpConnection::connectToServer(const std::string&
     return nullptr;
   }
   setupSocket(sockfd);
-  return std::make_unique<TcpConnection>(sockfd, recvFun);
+  return std::make_unique<TcpConnection>(sockfd, recvFun, sendFun, pobj);
 }
 
 int TcpConnection::createServerSocket(short int port){
@@ -166,7 +172,7 @@ int TcpConnection::createServerSocket(short int port){
   return sockfd;
 }
 
-std::unique_ptr<TcpConnection> TcpConnection::waitForNewClient(int sockfd, const std::chrono::milliseconds &timeout, FunProcessMessage recvFun){
+std::unique_ptr<TcpConnection> TcpConnection::waitForNewClient(int sockfd, const std::chrono::milliseconds &timeout, FunProcessMessage recvFun, FunSendDeamon sendFun, void* pobj){
   sockaddr_in cli_addr;
   socklen_t clilen = sizeof(cli_addr);
   std::chrono::system_clock::time_point  tp_timeout = std::chrono::system_clock::now() + timeout;
@@ -199,7 +205,7 @@ std::unique_ptr<TcpConnection> TcpConnection::waitForNewClient(int sockfd, const
          (cli_addr.sin_addr.s_addr & 0xFF), (cli_addr.sin_addr.s_addr & 0xFF00) >> 8,
          (cli_addr.sin_addr.s_addr & 0xFF0000) >> 16, (cli_addr.sin_addr.s_addr & 0xFF000000) >> 24);
     setupSocket(sockfd_conn);
-    return std::make_unique<TcpConnection>(sockfd_conn, recvFun);
+    return std::make_unique<TcpConnection>(sockfd_conn, recvFun, sendFun, pobj);
   }
 }
 

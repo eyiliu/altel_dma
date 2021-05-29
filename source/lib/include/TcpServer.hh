@@ -27,9 +27,9 @@ public:
   ~TcpServer();
 
   uint64_t threadClientMananger(short int port);
-  int64_t threadConnectionSend();
 
-  static int processMessage(msgpack::object_handle &oh);
+  int perConnSendDeamon(void* pconn);
+  static int processMessage(void* pobj, void* pconn, msgpack::object_handle &oh);
 
 private:
   std::future<uint64_t> m_fut;
