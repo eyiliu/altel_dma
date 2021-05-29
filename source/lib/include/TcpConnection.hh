@@ -19,6 +19,16 @@ typedef int (*FunProcessMessage)(void* pobj, void* pconn,  msgpack::object_handl
 typedef int (*FunSendDeamon)(void* pobj, void*pconn);
 
 
+struct NetMsg{
+  enum Type: uint16_t {data, daqcmd, daqinit, daqstart, daqstop};
+  uint16_t type;
+  uint16_t device;
+  uint32_t address;
+  uint32_t value;
+  std::vector<char> bin;
+  MSGPACK_DEFINE(type, device, address, value, bin);
+};
+
 class TcpConnection{
 public:
   TcpConnection() = delete;
@@ -49,6 +59,7 @@ public:
   static int processMessageServerTest(void* pobj, void* pconn, msgpack::object_handle& oh);
   static int processMessageClientTest(void* pobj, void* pconn, msgpack::object_handle& oh);
 
+  static std::string binToHexString(const char *bin, int len);
 private:
   std::future<uint64_t> m_fut;
   std::future<int> m_fut_send;

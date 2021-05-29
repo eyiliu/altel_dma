@@ -1,16 +1,14 @@
-
 #include <unistd.h>
 #include <vector>
 #include <iostream>
+#include <chrono>
+
 
 #include "TcpServer.hh"
 #include "TcpConnection.hh"
 
 TcpServer::TcpServer(short int port){
-  m_fw.fw_init();
-  m_fw.fw_start();
   m_rd.Open();
-
   m_isActive = true;
   m_fut = std::async(std::launch::async, &TcpServer::threadClientMananger, this, port);
 }
@@ -31,14 +29,18 @@ uint64_t TcpServer::threadClientMananger(short int port){
     printf("unable to create server listenning socket\n");
     m_isActive = false;
   }
+  std::unique_ptr<TcpConnection> conn;
 
   while(m_isActive){
-    if( (!m_conn) || (m_conn && !(*m_conn)) ){
+    if(conn && !(*conn)){
+      conn.reset();
+    }
+    if(!conn){
       auto new_conn = TcpConnection::waitForNewClient(sockfd, std::chrono::seconds(1),
-                                                      reinterpret_cast<FunProcessMessage>(&TcpServer::processMessage),
+                                                      reinterpret_cast<FunProcessMessage>(&TcpServer::perConnProcessMessage),
                                                       reinterpret_cast<FunSendDeamon>(&TcpServer::perConnSendDeamon), this);
       if(new_conn){
-        m_conn = std::move(new_conn);
+        conn = std::move(new_conn);
       }
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -51,41 +53,43 @@ uint64_t TcpServer::threadClientMananger(short int port){
   return 0;
 }
 
-struct NetMsg{
-  uint16_t msgtype;
-  uint16_t device;
-  uint32_t address;
-  uint32_t value;
-  std::vector<char> bin;
-  MSGPACK_DEFINE(msgtype, device, address, value, bin);
-};
 
-std::string binToHexString(const char *bin, int len){
-  constexpr char hexmap[] = {'0', '1', '2', '3', '4', '5', '6', '7',
-                             '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
-  const unsigned char* data = (const unsigned char*)(bin);
-  std::string s(len * 2, ' ');
-  for (int i = 0; i < len; ++i) {
-    s[2 * i]     = hexmap[(data[i] & 0xF0) >> 4];
-    s[2 * i + 1] = hexmap[data[i] & 0x0F];
-  }
-  return s;
-}
-
-int TcpServer::processMessage(void* pobj, void* pconn, msgpack::object_handle &oh){
+int TcpServer::perConnProcessMessage(void* pconn, msgpack::object_handle &oh){
   std::cout << "TcpServer processMessage: " << oh.get() << std::endl;
   auto& msg = oh.get();
   NetMsg netmsg = msg.as<NetMsg>();
-  std::cout<< netmsg.msgtype<<" " << netmsg.device<<" " <<netmsg.address <<" "<< netmsg.value<<" "<<std::endl;
-  std::cout<< "bin "<<binToHexString(netmsg.bin.data(),netmsg.bin.size())<<std::endl;
+  std::cout<< netmsg.type<<" " << netmsg.device<<" " <<netmsg.address <<" "<< netmsg.value<<" "<<std::endl;
+  std::cout<< "bin "<<TcpConnection::binToHexString(netmsg.bin.data(),netmsg.bin.size())<<std::endl;
+
+  switch(netmsg.type){
+  case NetMsg::Type::data :{
+    std::cout<< "yes, data"<<std::endl;
+    break;
+  }
+  case NetMsg::Type::daqinit :{
+    m_fw.fw_init();
+    std::cout<< "yes, init"<<std::endl;
+    break;
+  }
+  case NetMsg::Type::daqstart :{
+    m_fw.fw_start();
+    std::cout<< "yes, start"<<std::endl;
+    break;
+  }
+  case NetMsg::Type::daqstop :{
+    m_fw.fw_stop();
+    std::cout<< "yes, stop"<<std::endl;
+    break;
+  }
+  default:
+    std::cout<< "unknown msg type"<<std::endl;
+  }
   return 0;
 }
 
-
 int TcpServer::perConnSendDeamon(void  *pconn){
-  // TcpServer* serv = reinterpret_cast<TcpServer*>(pobj);
   TcpConnection* conn = reinterpret_cast<TcpConnection*>(pconn);
-  while(conn &&  (*conn)){
+  while((*conn)){
     std::string dataraw = m_rd.readRawPack(std::chrono::milliseconds(1000));
     if(dataraw.empty())
       continue;
