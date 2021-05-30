@@ -1059,6 +1059,55 @@
 	    "description":""
 	},
 	{
+	    "name":"RESET",
+	    "value":"0xff000000",
+	    "bytes":4,
+	    "words":1,
+	    "description":""
+	},
+	{
+	    "name":"DEVICE0",
+	    "value":"0xfa000000",
+	    "bytes":4,
+	    "words":1,
+	    "description":""
+	},
+	{
+	    "name":"DEVICE1",
+	    "value":"0xfa000001",
+	    "bytes":4,
+	    "words":1,
+	    "description":""
+	},
+	{
+	    "name":"DEVICE2",
+	    "value":"0xfa000002",
+	    "bytes":4,
+	    "words":1,
+	    "description":""
+	},
+	{
+	    "name":"DEVICE3",
+	    "value":"0xfa000003",
+	    "bytes":4,
+	    "words":1,
+	    "description":""
+	},
+	{
+	    "name":"DEVICE4",
+	    "value":"0xfa000004",
+	    "bytes":4,
+	    "words":1,
+	    "description":""
+	},
+	{
+	    "name":"DEVICE5",
+	    "value":"0xfa000005",
+	    "bytes":4,
+	    "words":1,
+	    "description":""
+	},
+	{
 	    "name":"TEST_ID",
 	    "value":"0xfa00000f",
 	    "bytes":4,

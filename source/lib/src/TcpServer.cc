@@ -7,7 +7,9 @@
 #include "TcpServer.hh"
 #include "TcpConnection.hh"
 
-TcpServer::TcpServer(short int port){
+TcpServer::TcpServer(short int port, uint16_t deviceid, std::vector<std::pair<uint16_t, uint16_t>> hots){
+  m_hots = hots;
+  m_deviceid = deviceid;
   // m_fw.fw_init();
   // m_fw.fw_start();
   m_rd.Open();
@@ -70,8 +72,14 @@ int TcpServer::perConnProcessMessage(void* pconn, msgpack::object_handle &oh){
     break;
   }
   case NetMsg::Type::daqinit :{
+    std::cout<< "init"<<std::endl;
     m_fw.fw_init();
-    std::cout<< "yes, init"<<std::endl;
+
+    m_fw.fw_setid(m_deviceid);
+    for(auto& hot_xy: m_hots ){
+      std::cout<<"hot xy [ "<< hot_xy.first<<" : "<< hot_xy.second<<" ]"<<std::endl;
+      m_fw.SetPixelRegister(hot_xy.first, hot_xy.second, "MASK_EN", true);
+    }
     break;
   }
   case NetMsg::Type::daqstart :{
@@ -84,6 +92,14 @@ int TcpServer::perConnProcessMessage(void* pconn, msgpack::object_handle &oh){
     std::cout<< "yes, stop"<<std::endl;
     break;
   }
+  // case NetMsg::Type::daqcmd:{
+  //   if(netmsg.device == 100){
+  //     uint32_t xy = netmsg.address;
+  //     uint16_t x = (xy & 0xffff0000)>> 16;
+  //     uint16_t y = (xy & 0x0000ffff);
+  //     m_fw.SetPixelRegister(x, y, "MASK_EN", netmsg.value?true:false);
+  //   }
+  // }
   default:
     std::cout<< "unknown msg type"<<std::endl;
   }

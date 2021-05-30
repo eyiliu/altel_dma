@@ -38,7 +38,7 @@ int main(){
   std::this_thread::sleep_for (std::chrono::seconds(1));
 
   ClientData cdata;
-  std::unique_ptr<TcpConnection> tcpClient = TcpConnection::connectToServer("131.169.133.170", 9000, &perConnClientProcessMsg, &perConnClientSendDeamon, &cdata);
+  std::unique_ptr<TcpConnection> tcpClient = TcpConnection::connectToServer("131.169.133.170", 9000, &perConnClientProcessMsg, nullptr, &cdata);
 
   std::cout<<"sleep 1s"<<std::endl;
   std::this_thread::sleep_for (std::chrono::seconds(1));

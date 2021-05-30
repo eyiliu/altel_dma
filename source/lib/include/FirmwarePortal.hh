@@ -46,6 +46,7 @@ public:
   
 
   void fw_init();
+  void fw_setid(uint32_t);
   void fw_start();
   void fw_stop();
 

@@ -19,7 +19,7 @@ public:
   TcpServer() = delete;
   TcpServer(const TcpServer&) =delete;
   TcpServer& operator=(const TcpServer&) =delete;
-  TcpServer(short int port);
+  TcpServer(short int port, uint16_t deviceid, std::vector<std::pair<uint16_t, uint16_t>> hots);
   ~TcpServer();
 
   uint64_t threadClientMananger(short int port);
@@ -32,5 +32,8 @@ private:
   bool m_isActive{false};
   FirmwarePortal m_fw{"builtin"};
   AltelReader m_rd;
+
+  std::vector<std::pair<uint16_t, uint16_t>> m_hots;
+  uint16_t m_deviceid;
 };
 

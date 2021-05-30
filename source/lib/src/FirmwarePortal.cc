@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
+#include <string>
+
 #include "FirmwarePortal.hh"
 
 static const std::string altel_reg_cmd_list_content =
@@ -1006,13 +1008,26 @@ uint64_t FirmwarePortal::GetRegionRegister(uint64_t region, const std::string& n
 
 void FirmwarePortal::InjectPulse(){
   //SetAlpideRegister("FROMU_CONF_1", ); // APULSE/DPULSE
-  SetAlpideRegister("FROMU_PULSING_2", 0xff); // duration  
+  SetAlpideRegister("FROMU_PULSING_2", 0xff); // duration
   SendAlpideBroadcast("PULSE");
 }
 
+
+void FirmwarePortal::fw_setid(uint32_t id){
+  std::string cmd("DEVICE");
+  char ch_id = id%6 + '0';
+  cmd = cmd+ch_id;
+  SendFirmwareCommand(cmd);
+}
+
 void FirmwarePortal::fw_init(){
+  SendFirmwareCommand("RESET");
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+  
   SendFirmwareCommand("TRIGGER_VETO");
   // stop trigger, go into configure mode
+
+  // "sensor":{"FROMU_CONF_1":1792, "FROMU_CONF_2":13, "VCASN":61, "VCASN2":73, "ITHR":56 }
 
   //=========== init part ========================
   // 3.8 Chip initialization
@@ -1023,8 +1038,11 @@ void FirmwarePortal::fw_init(){
   SetAlpideRegister("VRESETP", 0x75); //117
   SetAlpideRegister("VRESETD", 0x93); //147
   SetAlpideRegister("VCASP", 0x56);   //86
-  uint32_t vcasn = 57;
-  uint32_t ithr  = 51;
+  // uint32_t vcasn = 57;
+  // uint32_t ithr  = 51;
+  uint32_t vcasn = 61;
+  uint32_t ithr  = 56;
+
   SetAlpideRegister("VCASN", vcasn);   //57 Y50
   SetAlpideRegister("VPULSEH", 0xff); //255
   SetAlpideRegister("VPULSEL", 0x0);  //0
@@ -1054,7 +1072,7 @@ void FirmwarePortal::fw_init(){
   // 3.8.3.2 Setting FROMU Configuration Registers and enabling readout mode
   // FROMU Configuration Register 1,2
   SetAlpideRegister("FROMU_CONF_1", 0x00); //Disable external busy, no triger delay
-  SetAlpideRegister("FROMU_CONF_2", 20); //STROBE duration, alice testbeam 100
+  SetAlpideRegister("FROMU_CONF_2", 13); //STROBE duration, alice testbeam 100
   // FROMU Pulsing Register 1,2
   // m_fw->SetAlpideRegister("FROMU_PULSING_2", 0xffff); //yiliu: test pulse duration, max
   // Periphery Control Register (CHIP MODE)
