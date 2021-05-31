@@ -119,7 +119,7 @@ int main(int argn, char ** argc){
   std::cout<< "set device id: "<<n<<std::endl;
 
   signal(SIGINT, [](int){g_done+=1;});
-  std::unique_ptr<TcpServer> tcpServer(new TcpServer(9000, 0, hots[0]));
+  std::unique_ptr<TcpServer> tcpServer(new TcpServer(9000, n, hots[n]));
   while(!g_done){
     std::this_thread::sleep_for (std::chrono::seconds(1));
   }
