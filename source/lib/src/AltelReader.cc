@@ -10,13 +10,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "myrapidjson.h"
 #include "AltelReader.hh"
-
 
 #define HEADER_BYTE  (0x5a)
 #define FOOTER_BYTE  (0xa5)
-
 
 namespace{
   std::string CStringToHexString(const char *bin, const int len){
@@ -34,11 +31,6 @@ namespace{
   std::string StringToHexString(const std::string& bin){
     return CStringToHexString(bin.data(), bin.size());
   }
-
-
-
-
-
 }
 
 
@@ -63,13 +55,7 @@ AltelReader::~AltelReader(){
 }
 
 AltelReader::AltelReader(){
-  // m_js_conf.CopyFrom<rapidjson::CrtAllocator>(js , m_jsa);
-
   m_fd = 0;
-  // auto& js_proto = m_js_conf["protocol"];
-  // auto& js_opt = m_js_conf["options"];
-  // m_file_path = js_opt["path"].GetString();
-
   m_file_path = "/dev/axidmard"; 
 };
 
@@ -92,28 +78,28 @@ void AltelReader::Close(){
   m_fd = 0;
 }
 
-std::vector<DataFrameSP> AltelReader::Read(size_t size_max_pkg,
-                                           const std::chrono::milliseconds &timeout_idle,
-                                           const std::chrono::milliseconds &timeout_total){
-  std::chrono::system_clock::time_point tp_timeout_total = std::chrono::system_clock::now() + timeout_total;
-  std::vector<DataFrameSP> pkg_v;
-  while(1){
-    DataFrameSP pkg = Read(timeout_idle);
-    if(pkg){
-      pkg_v.push_back(pkg);
-      if(pkg_v.size()>=size_max_pkg){
-        break;
-      }
-    }
-    else{
-      break; 
-    }
-    if(std::chrono::system_clock::now() > tp_timeout_total){
-      break;
-    }
-  }
-  return pkg_v;
-}
+// std::vector<DataFrameSP> AltelReader::Read(size_t size_max_pkg,
+//                                            const std::chrono::milliseconds &timeout_idle,
+//                                            const std::chrono::milliseconds &timeout_total){
+//   std::chrono::system_clock::time_point tp_timeout_total = std::chrono::system_clock::now() + timeout_total;
+//   std::vector<DataFrameSP> pkg_v;
+//   while(1){
+//     DataFrameSP pkg = Read(timeout_idle);
+//     if(pkg){
+//       pkg_v.push_back(pkg);
+//       if(pkg_v.size()>=size_max_pkg){
+//         break;
+//       }
+//     }
+//     else{
+//       break; 
+//     }
+//     if(std::chrono::system_clock::now() > tp_timeout_total){
+//       break;
+//     }
+//   }
+//   return pkg_v;
+// }
 
 
 std::string readPack(int fd_rx, const std::chrono::milliseconds &timeout_idel){ //timeout_read_interval
@@ -195,6 +181,7 @@ std::string readPack(int fd_rx, const std::chrono::milliseconds &timeout_idel){ 
   return buf;
 }
 
+/*
 DataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idle){ //timeout_read_interval
   auto buf = readPack(m_fd, timeout_idle);
   if(buf.empty()){
@@ -205,6 +192,7 @@ DataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idle){ //
   // return df;
   return std::make_shared<DataFrame>(std::move(buf));
 }
+*/
 
 std::string AltelReader::LoadFileToString(const std::string& path){
   std::ifstream ifs(path);

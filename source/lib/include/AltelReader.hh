@@ -6,18 +6,18 @@
 #include <chrono>
 
 #include "mysystem.hh"
-#include "DataFrame.hh"
+#include "TelEvent.hpp"
 
 class AltelReader{
 public:
   ~AltelReader();
   AltelReader();
 
-  DataFrameSP Read(const std::chrono::milliseconds &timeout);
+  // DataFrameSP Read(const std::chrono::milliseconds &timeout);
 
-  std::vector<DataFrameSP> Read(size_t size_max_pkg,
-                                const std::chrono::milliseconds &timeout_idle,
-                                const std::chrono::milliseconds &timeout_total);
+  // std::vector<DataFrameSP> Read(size_t size_max_pkg,
+  //                               const std::chrono::milliseconds &timeout_idle,
+  //                               const std::chrono::milliseconds &timeout_total);
 
 
   std::string readRawPack(const std::chrono::milliseconds &timeout_idel);
@@ -30,7 +30,6 @@ public:
 private:
   int m_fd{0};
   std::string m_file_path;
-  JsonDocument m_jsdoc_conf;
 };
 
 #endif

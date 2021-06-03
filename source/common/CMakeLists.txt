@@ -13,6 +13,8 @@ target_link_libraries(mycommon INTERFACE
   linenoiseng
   getopt
   rapidjson
+  stdc++fs
+  Threads::Threads
   )
 
 target_include_directories(mycommon
