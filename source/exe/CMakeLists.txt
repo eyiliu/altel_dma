@@ -10,7 +10,10 @@ target_link_libraries(testclient PRIVATE altel-rbcp mycommon)
 add_executable(testdump testdump.cc)
 target_link_libraries(testdump PRIVATE altel-rbcp mycommon)
 
-install(TARGETS testdump testserver testclient testdecode
+add_executable(testctrl testctrl.cc)
+target_link_libraries(testctrl PRIVATE altel-rbcp mycommon)
+
+install(TARGETS testdump testserver testclient testdecode testctrl
   EXPORT ${PROJECT_NAME}Targets
   RUNTIME       DESTINATION bin      COMPONENT runtime
   LIBRARY       DESTINATION lib      COMPONENT runtime

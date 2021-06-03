@@ -242,8 +242,11 @@ namespace{
 
 static const std::string help_usage = R"(
 Usage:
-  -help                        help message
-  -hex <  >
+  -help                    help message
+  -hex <HEXRAW>            hex string input 
+
+
+
 )";
 
 int main(int argc, char *argv[]) {

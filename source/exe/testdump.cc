@@ -381,16 +381,16 @@ Usage:
   -exitTime       <n>          exit after n seconds (0=NoLimit, default 10)
 examples:
 #1. save data and print
-./dmarx_dump -rawPrint -rawFile test.dat
+testdump -rawPrint -rawFile test.dat
 
 #2. save data only
-./dmarx_dump -rawFile test.dat
+testdump -rawFile test.dat
 
 #3. print only
-./dmarx_dump -rawPrint
+testdump -rawPrint
 
 #4. print, exit after 60 seconds
-./dmarx_dump -rawPrint -exitTime 60
+testdump -rawPrint -exitTime 60
 
 )";
 
