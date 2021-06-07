@@ -22,9 +22,6 @@ using std::uint16_t;
 using std::uint32_t;
 using std::size_t;
 
-#define HEADER_BYTE 0x5a
-#define FOOTER_BYTE 0xa5
-
 #ifndef DEBUG_PRINT
 #define DEBUG_PRINT 1
 #endif
