@@ -16,6 +16,7 @@
 
 // #include "TelEvent.hpp"
 
+
 #include "getopt.h"
 
 using std::uint8_t;
@@ -44,7 +45,7 @@ uint64_t AsyncWatchDog(){
   auto tp_old = tp_run_begin;
   size_t st_old_dataFrameN = 0;
   size_t st_old_unexpectedN = 0;
-  
+
   while(!g_done){
     std::this_thread::sleep_for(std::chrono::seconds(1));
     auto tp_now = std::chrono::system_clock::now();
@@ -56,7 +57,7 @@ uint64_t AsyncWatchDog(){
     size_t st_unexpectedN = ga_unexpectedN;
     size_t st_dataFrameN = ga_dataFrameN;
     uint16_t st_lastTriggerId= ga_lastTriggerId;
-    
+
     double st_hz_pack_accu = st_dataFrameN / sec_accu;
     double st_hz_pack_period = (st_dataFrameN-st_old_dataFrameN) / sec_period;
 
@@ -243,7 +244,7 @@ namespace{
       throw;
     }
 
-    p_raw++; //header   
+    p_raw++; //header 
     p_raw++; //resv
     p_raw++; //resv
 
@@ -377,6 +378,8 @@ Usage:
   -help                        help message
   -verbose                     verbose flag
   -rawPrint                    print data by hex format in terminal
+  -decode                      decode the raw data
+  -tidCheck                    check the trigger TID continuous
   -rawFile        <path>       path of raw file to save
   -exitTime       <n>          exit after n seconds (0=NoLimit, default 10)
 examples:
@@ -401,11 +404,14 @@ int main(int argc, char *argv[]) {
   std::string ipAddressStr;
   int exitTimeSecond = 10;
   bool do_rawPrint = false;
-
+  bool do_decode = false;
+  bool do_tidCheck = false;
   int do_verbose = 0;
   {////////////getopt begin//////////////////
     struct option longopts[] = {{"help",      no_argument, NULL, 'h'},//option -W is reserved by getopt
                                 {"verbose",   no_argument, NULL, 'v'},//val
+                                {"decode",    no_argument, NULL, 'd'},
+                                {"tidCheck",  no_argument, NULL, 'c'},
                                 {"rawPrint",  no_argument, NULL, 's'},
                                 {"rawFile",   required_argument, NULL, 'f'},
                                 {"exitTime",  required_argument, NULL, 'e'},
@@ -432,6 +438,12 @@ int main(int argc, char *argv[]) {
         break;
       case 's':
         do_rawPrint = true;
+        break;
+      case 'c':
+        do_tidCheck = true;
+        break;
+      case 'd':
+        do_decode = true;
         break;
         // help and verbose
       case 'v':
@@ -539,7 +551,7 @@ int main(int argc, char *argv[]) {
 
   size_t unexpectedN = 0;
   size_t dataFrameN = 0;
-  
+
   std::chrono::system_clock::time_point tp_timeout_exit  = std::chrono::system_clock::now() + std::chrono::seconds(exitTimeSecond);
 
   bool isFirstEvent = true;
@@ -554,6 +566,8 @@ int main(int argc, char *argv[]) {
       std::fprintf(stdout, "run %d seconds, nornal exit\n", exitTimeSecond);
       break;
     }
+
+
     auto df_pack = readPack(fd_rx, std::chrono::seconds(1));
     // auto df = rd->Read(std::chrono::seconds(1));
     if(df_pack.empty()){
@@ -566,7 +580,7 @@ int main(int argc, char *argv[]) {
       std::fprintf(stdout, "ERROR, too small pack size\n");
     }
     if(do_rawPrint){
-      std::fprintf(stdout, "DataFrame #%d, DeviceId #%hhu,  TriggerId #%hu, PayloadLen %u\n",
+      std::fprintf(stdout, "-- DataFrame #%d, DeviceId #%hhu,  TriggerId #%hu, PayloadLen %u\n",
                    dataFrameN, df_pack[3],
                    *reinterpret_cast<const uint16_t*>(df_pack.data() + 8),
                    *reinterpret_cast<const uint32_t*>(df_pack.data() + 4));
@@ -581,12 +595,14 @@ int main(int argc, char *argv[]) {
       isFirstEvent = false;
     }
     uint16_t expectedId = lastId +1;
-    
+
     if(triggerId != expectedId ){
-      std::fprintf(stdout, "expected #%hu, got #%hu,  lost #%hu\n",  expectedId, triggerId, triggerId-expectedId);
+      if(do_tidCheck){
+        std::fprintf(stdout, "expected #%hu, got #%hu,  lost #%hu\n",  expectedId, triggerId, triggerId-expectedId);
+      }
       unexpectedN ++;
-    }    
-    
+    }
+
     if(fp){
       std::fwrite(df_pack.data(), 1, df_pack.size(), fp);
       std::fflush(fp);
@@ -600,7 +616,7 @@ int main(int argc, char *argv[]) {
   }
 
   std::fprintf(stdout, "dataFrameN #%zu, unexpectedN #%zu\n",  dataFrameN, unexpectedN);
-  
+
   close(fd_rx);
   if(fp){
     std::fflush(fp);
@@ -610,7 +626,7 @@ int main(int argc, char *argv[]) {
   g_done= 1;
   if(fut_async_watch.valid())
     fut_async_watch.get();
-  
+
   return 0;
 }
 
