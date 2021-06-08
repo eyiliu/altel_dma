@@ -9,8 +9,6 @@
 TcpServer::TcpServer(short int port, uint16_t deviceid, std::vector<std::pair<uint16_t, uint16_t>> hots){
   m_hots = hots;
   m_deviceid = deviceid;
-  // m_fw.fw_init();
-  // m_fw.fw_start();
   m_rd.Open();
   m_isActive = true;
   m_fut = std::async(std::launch::async, &TcpServer::threadClientMananger, this, port);
@@ -60,45 +58,35 @@ uint64_t TcpServer::threadClientMananger(short int port){
 int TcpServer::perConnProcessMessage(void* pconn, msgpack::object_handle &oh){
   msgpack::object msg = oh.get();
   unique_zone& life = oh.zone();
-  std::cout << "TcpServer processMessage: " << msg << std::endl;
+  // std::cout << "TcpServer processMessage: " << msg << std::endl;
   NetMsg netmsg = msg.as<NetMsg>();
-  std::cout<< netmsg.type<<" " << netmsg.device<<" " <<netmsg.address <<" "<< netmsg.value<<" "<<std::endl;
-  std::cout<< "bin "<<TcpConnection::binToHexString(netmsg.bin.data(),netmsg.bin.size())<<std::endl;
+  // std::cout<< netmsg.type<<" " << netmsg.device<<" " <<netmsg.address <<" "<< netmsg.value<<" "<<std::endl;
+  // std::cout<< "bin "<<TcpConnection::binToHexString(netmsg.bin.data(),netmsg.bin.size())<<std::endl;
 
   switch(netmsg.type){
   case NetMsg::Type::data :{
-    std::cout<< "yes, data"<<std::endl;
     break;
   }
   case NetMsg::Type::daqinit :{
-    std::cout<< "init"<<std::endl;
+    std::cout<< "datatking init"<<std::endl;
     m_fw.fw_init();
-
     m_fw.fw_setid(m_deviceid);
     for(auto& hot_xy: m_hots ){
-      std::cout<<"hot xy [ "<< hot_xy.first<<" : "<< hot_xy.second<<" ]"<<std::endl;
+      // std::cout<<"hot xy [ "<< hot_xy.first<<" : "<< hot_xy.second<<" ]"<<std::endl;
       m_fw.SetPixelRegister(hot_xy.first, hot_xy.second, "MASK_EN", true);
     }
     break;
   }
   case NetMsg::Type::daqstart :{
     m_fw.fw_start();
-    std::cout<< "yes, start"<<std::endl;
+    std::cout<< "datatking start"<<std::endl;
     break;
   }
   case NetMsg::Type::daqstop :{
     m_fw.fw_stop();
-    std::cout<< "yes, stop"<<std::endl;
+    std::cout<< "datatking stop"<<std::endl;
     break;
   }
-  // case NetMsg::Type::daqcmd:{
-  //   if(netmsg.device == 100){
-  //     uint32_t xy = netmsg.address;
-  //     uint16_t x = (xy & 0xffff0000)>> 16;
-  //     uint16_t y = (xy & 0x0000ffff);
-  //     m_fw.SetPixelRegister(x, y, "MASK_EN", netmsg.value?true:false);
-  //   }
-  // }
   default:
     std::cout<< "unknown msg type"<<std::endl;
   }
@@ -107,17 +95,16 @@ int TcpServer::perConnProcessMessage(void* pconn, msgpack::object_handle &oh){
 
 int TcpServer::perConnSendDeamon(void  *pconn){
   TcpConnection* conn = reinterpret_cast<TcpConnection*>(pconn);
-  // std::cout<<">>>>>>>>TcpServer::perConnSendDeamon start"<<std::endl;
   std::stringstream ssbuf;
   std::string strbuf;
   while((*conn)){
     std::string dataraw = m_rd.readRawPack(std::chrono::milliseconds(1000));
     if(dataraw.empty()){
-      // std::cout<<"empty pack"<<std::endl;
       continue;
     }
 
-    // std::cout<< "got somethin"<<std::endl;
+    // auto telev = AltelReader::createTelEvent(dataraw);
+    
     NetMsg dataMsg{NetMsg::data, 0, 0, 0, {std::vector<char>(dataraw.begin(), dataraw.end())}};
     ssbuf.str(std::string());
     msgpack::pack(ssbuf, dataMsg);
@@ -136,11 +123,5 @@ int TcpServer::perConnSendDeamon(void  *pconn){
     // strbuf = ssbuf.str();
     // conn->sendRaw(strbuf.data(), strbuf.size());
   }
-  // std::cout<<">>>>>>>>TcpServer::perConnSendDeamon stop"<<std::endl;
   return 0;
 }
-
-
-
-
-

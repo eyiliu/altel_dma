@@ -55,6 +55,7 @@ uint64_t TcpConnection::threadConnRecv(FunProcessMessage processMessage, void* p
     FD_SET(m_sockfd, &fds);
     FD_SET(0, &fds);
     if(!select(m_sockfd+1, &fds, NULL, NULL, &tv_timeout) || !FD_ISSET(m_sockfd, &fds) ){
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
       continue;
     }
     unp.reserve_buffer(4096);
@@ -64,10 +65,10 @@ uint64_t TcpConnection::threadConnRecv(FunProcessMessage processMessage, void* p
       std::printf("connection is closed by remote peer\n");
       break;
     }
-    if(count>0){
-      std::cout<<"get bytes "<<count<<std::endl;
+    if(count == 0){
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      continue;
     }
-
     unp.buffer_consumed(count);
     while (unp.next(oh)){
       int re = (*processMessage)(pobj, this, oh);

@@ -10,6 +10,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+
+#include <thread>
+
+
 #include "AltelReader.hh"
 
 #ifndef DEBUG_PRINT
@@ -214,6 +218,7 @@ std::string AltelReader::readPack(int fd_rx, const std::chrono::milliseconds &ti
 	  // throw;
 	}
       }
+      // std::this_thread::sleep_for(std::chrono::microseconds(10));
       continue;
     }
     else{
